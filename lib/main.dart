@@ -3,14 +3,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'user/register_page.dart';
+import 'admin/dashbord.dart';
+import 'theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: 'https://qkjlatswbxyjkdyxrsjr.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFramxhdHN3Ynh5amtkeXhyc2pyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc2NjM2MzYsImV4cCI6MjA2MzIzOTYzNn0.EU2DBkoSskYat1IkAmho6UQj1JdsZAHb5W8-wK8__Pk',
+    url: supabaseUrl,
+    anonKey: supabaseAnonKey,
   );
 
   runApp(const MyApp());
@@ -86,6 +87,18 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
+      // ورود ادمین با نام کاربری a و رمز 1
+      if (_phoneController.text == adminPhone &&
+          _passwordController.text == adminPassword) {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const AdminDashboard()),
+          );
+        }
+        return;
+      }
+
       final supabase = Supabase.instance.client;
 
       // بررسی وجود کاربر
