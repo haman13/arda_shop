@@ -18,6 +18,7 @@ class _NewProductDialogState extends State<NewProductDialog> {
   final _priceController = TextEditingController();
   final _descController = TextEditingController();
   final _discountController = TextEditingController();
+  final _stockController = TextEditingController();
   double _finalPrice = 0;
   File? _selectedImage;
   Uint8List? _webImageBytes;
@@ -90,6 +91,7 @@ class _NewProductDialogState extends State<NewProductDialog> {
         'final_price': _finalPrice,
         'description': _descController.text,
         'image_url': imageUrl,
+        'stock': int.tryParse(_stockController.text) ?? 0,
       });
       print('insertResponse: $insertResponse');
       Navigator.pop(context);
@@ -174,6 +176,24 @@ class _NewProductDialogState extends State<NewProductDialog> {
                 controller: _descController,
                 decoration: const InputDecoration(labelText: 'توضیحات'),
                 maxLines: 2,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _stockController,
+                decoration: const InputDecoration(labelText: 'موجودی'),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'موجودی را وارد کنید';
+                  }
+                  if (int.tryParse(value) == null) {
+                    return 'موجودی باید عدد باشد';
+                  }
+                  if (int.parse(value) < 0) {
+                    return 'موجودی نمی‌تواند منفی باشد';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 12),
               ElevatedButton.icon(

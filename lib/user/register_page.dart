@@ -10,30 +10,21 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _fullNameController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
-
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    _passwordController.dispose();
-    _fullNameController.dispose();
-    super.dispose();
-  }
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final supabase = Supabase.instance.client;
 
-      // بررسی تکراری نبودن شماره تماس
+      // بررسی تکراری نبودن شماره موبایل
       final existingUser = await supabase
           .from('users')
           .select()
@@ -43,36 +34,46 @@ class _RegisterPageState extends State<RegisterPage> {
       if (existingUser != null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('این شماره تماس قبلاً ثبت شده است')),
+            const SnackBar(
+                content: Text(
+                    'این شماره موبایل قبلاً ثبت شده است. لطفاً با شماره دیگری تلاش کنید یا وارد شوید.')),
           );
         }
         return;
       }
 
       // ثبت کاربر جدید
-      await supabase.from('users').insert({
+      final response = await supabase.from('users').insert({
+        'name': _nameController.text,
         'phone': _phoneController.text,
-        'password': _passwordController.text, // در حالت واقعی باید هش شود
-        'full_name': _fullNameController.text,
+        'password': _passwordController.text, // در حالت واقعی باید رمزنگاری شود
+        'created_at': DateTime.now().toIso8601String(),
       });
+
+      print(response);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ثبت‌نام با موفقیت انجام شد')),
+          const SnackBar(content: Text('ثبت نام با موفقیت انجام شد')),
         );
-        Navigator.pop(context); // برگشت به صفحه ورود
+        // پاک کردن فرم
+        _nameController.clear();
+        _phoneController.clear();
+        _passwordController.clear();
+        _confirmPasswordController.clear();
+
+        // بازگشت به صفحه قبل (مثلاً صفحه ورود)
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطا در ثبت‌نام: ${e.toString()}')),
+          SnackBar(content: Text('خطا در ثبت نام: $e')),
         );
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -81,18 +82,18 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ثبت‌نام'),
+        title: const Text('ثبت نام'),
         centerTitle: true,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               TextFormField(
-                controller: _fullNameController,
+                controller: _nameController,
                 decoration: const InputDecoration(
                   labelText: 'نام و نام خانوادگی',
                   border: OutlineInputBorder(),
@@ -108,19 +109,16 @@ class _RegisterPageState extends State<RegisterPage> {
               TextFormField(
                 controller: _phoneController,
                 decoration: const InputDecoration(
-                  labelText: 'شماره تماس',
+                  labelText: 'شماره موبایل',
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.phone,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'لطفاً شماره تماس را وارد کنید';
+                    return 'لطفاً شماره موبایل را وارد کنید';
                   }
-                  if (value.length != 11) {
-                    return 'شماره تماس باید ۱۱ رقم باشد';
-                  }
-                  if (!value.startsWith('09')) {
-                    return 'شماره تماس باید با 09 شروع شود';
+                  if (!RegExp(r'^09[0-9]{9}$').hasMatch(value)) {
+                    return 'شماره موبایل باید با ۰۹ شروع شود و ۱۱ رقم باشد';
                   }
                   return null;
                 },
@@ -143,20 +141,58 @@ class _RegisterPageState extends State<RegisterPage> {
                   return null;
                 },
               ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _register,
-                  child: _isLoading
-                      ? const CircularProgressIndicator()
-                      : const Text('ثبت‌نام'),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _confirmPasswordController,
+                decoration: const InputDecoration(
+                  labelText: 'تکرار رمز عبور',
+                  border: OutlineInputBorder(),
                 ),
+                obscureText: true,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'لطفاً تکرار رمز عبور را وارد کنید';
+                  }
+                  if (value != _passwordController.text) {
+                    return 'رمز عبور و تکرار آن مطابقت ندارند';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _isLoading ? null : _register,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text(
+                        'ثبت نام',
+                        style: TextStyle(fontSize: 16),
+                      ),
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
   }
 }

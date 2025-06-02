@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'newProduct.dart';
+import 'editProduct.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -60,6 +61,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
+  void _showEditProductPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const EditProductPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -68,10 +76,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
         centerTitle: true,
       ),
       body: Center(
-        child: ElevatedButton.icon(
-          onPressed: _showAddProductDialog,
-          icon: const Icon(Icons.add),
-          label: const Text('افزودن محصول'),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton.icon(
+              onPressed: _showAddProductDialog,
+              icon: const Icon(Icons.add),
+              label: const Text('افزودن محصول'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _showEditProductPage,
+              icon: const Icon(Icons.edit),
+              label: const Text('ویرایش محصولات'),
+            ),
+          ],
         ),
       ),
     );
