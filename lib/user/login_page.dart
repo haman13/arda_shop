@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../admin/dashbord.dart';
 import 'register_page.dart';
@@ -103,14 +104,22 @@ class _LoginPageState extends State<LoginPage> {
                 decoration: const InputDecoration(
                   labelText: 'شماره تماس',
                   border: OutlineInputBorder(),
+                  hintText: '09xxxxxxxxx',
                 ),
                 keyboardType: TextInputType.phone,
+                maxLength: 11,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                ],
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'لطفاً شماره تماس را وارد کنید';
                   }
                   if (value.length != 11) {
                     return 'شماره تماس باید ۱۱ رقم باشد';
+                  }
+                  if (!value.startsWith('09')) {
+                    return 'شماره تماس باید با ۰۹ شروع شود';
                   }
                   return null;
                 },

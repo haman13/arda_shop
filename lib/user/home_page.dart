@@ -109,18 +109,21 @@ class _HomePageState extends State<HomePage> {
                 child: Consumer<UserProvider>(
                   builder: (context, userProvider, child) {
                     if (userProvider.isLoggedIn) {
-                      return Align(
-                        alignment: Alignment.centerRight,
-                        child: IconButton(
-                          icon: const Icon(Icons.person,
-                              color: enterRegisterColor),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const ProfilePage()),
-                            );
-                          },
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 20),
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: IconButton(
+                            icon: const Icon(Icons.person,
+                                color: enterRegisterColor),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => const ProfilePage()),
+                              );
+                            },
+                          ),
                         ),
                       );
                     } else {

@@ -22,6 +22,12 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateUserInfo({String? name, String? phone}) {
+    if (name != null) _userName = name;
+    if (phone != null) _userPhone = phone;
+    notifyListeners();
+  }
+
   void logout() {
     _isLoggedIn = false;
     _userName = null;

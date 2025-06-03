@@ -118,6 +118,4 @@ Please read our contributing guidelines before submitting pull requests.
 This project is licensed under the MIT License.
 
 
-// مشکل ورود به صفحه فروشگاه با دیتابیس به عنوان کاربر حل شد .
-// مرحله بعد: پیاده‌سازی ثبت سفارش (Checkout) و نمایش سفارشات قبلی کاربر
-// همچنین وضعیت سبد خرید و Database integration به حالت انجام شده تغییر کرد و // مرحله بعدی (Checkout) به عنوان گام بعدی مشخص شد.
+//برنامه 
