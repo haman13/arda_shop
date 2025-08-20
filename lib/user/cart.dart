@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
+import '../theme.dart';
 import 'checkout_page.dart';
+import 'user_provider.dart';
+import 'login_page.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -23,12 +27,27 @@ class _CartPageState extends State<CartPage> {
   Future<void> _loadCartItems() async {
     setState(() => _isLoading = true);
     try {
-      final supabase = Supabase.instance.client;
-      final userId = supabase.auth.currentUser?.id;
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
 
-      if (userId == null) {
-        throw Exception('کاربر وارد نشده است');
+      // بررسی لاگین بودن کاربر
+      if (!userProvider.isLoggedIn || userProvider.userPhone == null) {
+        setState(() {
+          _isLoading = false;
+          _cartItems = []; // خالی کردن لیست
+        });
+        return; // فقط return کنیم، هدایت نکنیم
       }
+
+      final supabase = Supabase.instance.client;
+
+      // پیدا کردن user_id از روی شماره تلفن
+      final userData = await supabase
+          .from('users')
+          .select('id')
+          .eq('phone', userProvider.userPhone!)
+          .single();
+
+      final userId = userData['id'];
 
       // دریافت محصولات سبد خرید با اطلاعات کامل محصول
       final response = await supabase.from('cart_items').select('''
@@ -51,7 +70,14 @@ class _CartPageState extends State<CartPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطا در بارگذاری سبد خرید: $e')),
+          SnackBar(
+            content: Text(
+              'خطا در بارگذاری سبد خرید: $e',
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.primaryWhite),
+            ),
+            backgroundColor: AppColors.errorRed,
+          ),
         );
       }
       setState(() => _isLoading = false);
@@ -81,7 +107,14 @@ class _CartPageState extends State<CartPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطا در به‌روزرسانی تعداد: $e')),
+          SnackBar(
+            content: Text(
+              'خطا در به‌روزرسانی تعداد: $e',
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.primaryWhite),
+            ),
+            backgroundColor: AppColors.errorRed,
+          ),
         );
       }
     }
@@ -96,7 +129,14 @@ class _CartPageState extends State<CartPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطا در حذف محصول: $e')),
+          SnackBar(
+            content: Text(
+              'خطا در حذف محصول: $e',
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.primaryWhite),
+            ),
+            backgroundColor: AppColors.errorRed,
+          ),
         );
       }
     }
@@ -121,102 +161,186 @@ class _CartPageState extends State<CartPage> {
 
   @override
   Widget build(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context);
+
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: AppColors.appBarBackground,
+          title: Text(
+            'سبد خرید',
+            style: AppTextStyles.heading2,
+          ),
+          centerTitle: true,
+          elevation: 0.0,
+        ),
+        body: Center(
+          child: CircularProgressIndicator(
+            color: AppColors.primaryBlue,
+            strokeWidth: AppDimensions.loadingStrokeWidth,
+          ),
+        ),
+      );
     }
 
     if (_cartItems.isEmpty) {
-      return const Center(
-        child: Text('سبد خرید شما خالی است'),
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: AppColors.appBarBackground,
+          title: Text(
+            'سبد خرید',
+            style: AppTextStyles.heading2,
+          ),
+          centerTitle: true,
+          elevation: 0.0,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                userProvider.isLoggedIn
+                    ? Icons.shopping_cart_outlined
+                    : Icons.login,
+                size: 80,
+                color: AppColors.greyText,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                userProvider.isLoggedIn
+                    ? 'سبد خرید شما خالی است'
+                    : 'لطفاً ابتدا وارد حساب کاربری خود شوید',
+                style:
+                    AppTextStyles.heading3.copyWith(color: AppColors.greyText),
+                textAlign: TextAlign.center,
+              ),
+              if (!userProvider.isLoggedIn) ...[
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const LoginPage()),
+                    );
+                  },
+                  style: AppButtonStyles.primaryButton,
+                  child: Text(
+                    'ورود به حساب کاربری',
+                    style: AppTextStyles.buttonText,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('سبد خرید'),
+        backgroundColor: AppColors.appBarBackground,
+        title: Text(
+          'سبد خرید',
+          style: AppTextStyles.heading2,
+        ),
         centerTitle: true,
+        elevation: 0.0,
       ),
       body: Column(
         children: [
           Expanded(
             child: ListView.builder(
+              padding: AppPadding.allSmall,
               itemCount: _cartItems.length,
               itemBuilder: (context, index) {
                 final item = _cartItems[index];
                 final product = item['products'] as Map<String, dynamic>;
 
-                return Card(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      children: [
-                        // تصویر محصول
-                        if (product['image_url'] != null)
-                          Image.network(
-                            product['image_url'],
-                            width: 80,
-                            height: 80,
-                            fit: BoxFit.cover,
-                          )
-                        else
-                          Container(
-                            width: 80,
-                            height: 80,
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.image, size: 40),
+                return Container(
+                  margin: AppPadding.verticalSmall,
+                  decoration: AppDecorations.cartItemShadow,
+                  child: Card(
+                    elevation: 0,
+                    child: Padding(
+                      padding: AppPadding.allMedium,
+                      child: Row(
+                        children: [
+                          // تصویر محصول
+                          ClipRRect(
+                            borderRadius: AppBorderRadius.small,
+                            child: product['image_url'] != null
+                                ? Image.network(
+                                    product['image_url'],
+                                    width:
+                                        AppDimensions.productImageWidth * 1.6,
+                                    height: AppDimensions.productImageHeight,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Container(
+                                    width:
+                                        AppDimensions.productImageWidth * 1.6,
+                                    height: AppDimensions.productImageHeight,
+                                    color: AppColors.productImagePlaceholder,
+                                    child: Icon(
+                                      Icons.image,
+                                      size: AppDimensions.iconSize * 1.5,
+                                      color: AppColors.greyText,
+                                    ),
+                                  ),
                           ),
-                        const SizedBox(width: 16),
-                        // اطلاعات محصول
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          AppSizedBox.width16,
+                          // اطلاعات محصول
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  product['name'],
+                                  style: AppTextStyles.productTitle,
+                                ),
+                                AppSizedBox.height4,
+                                Text(
+                                  AppUtilities.formatPrice(
+                                      product['final_price']),
+                                  style: AppTextStyles.productPrice,
+                                ),
+                              ],
+                            ),
+                          ),
+                          // کنترل‌های تعداد
+                          Row(
                             children: [
-                              Text(
-                                product['name'],
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                              IconButton(
+                                icon: const Icon(Icons.remove),
+                                onPressed: () => _updateQuantity(
+                                  item['id'],
+                                  (item['quantity'] as int) - 1,
                                 ),
                               ),
-                              const SizedBox(height: 4),
                               Text(
-                                '${product['final_price']} تومان',
-                                style: const TextStyle(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.bold,
+                                '${item['quantity']}',
+                                style: AppTextStyles.bodyMedium,
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.add),
+                                onPressed: () => _updateQuantity(
+                                  item['id'],
+                                  (item['quantity'] as int) + 1,
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                        // کنترل‌های تعداد
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.remove),
-                              onPressed: () => _updateQuantity(
-                                item['id'],
-                                (item['quantity'] as int) - 1,
-                              ),
+                          // دکمه حذف
+                          IconButton(
+                            icon: Icon(
+                              Icons.delete,
+                              color: AppColors.cartDeleteButton,
                             ),
-                            Text('${item['quantity']}'),
-                            IconButton(
-                              icon: const Icon(Icons.add),
-                              onPressed: () => _updateQuantity(
-                                item['id'],
-                                (item['quantity'] as int) + 1,
-                              ),
-                            ),
-                          ],
-                        ),
-                        // دکمه حذف
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _removeItem(item['id']),
-                        ),
-                      ],
+                            onPressed: () => _removeItem(item['id']),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -225,12 +349,12 @@ class _CartPageState extends State<CartPage> {
           ),
           // بخش جمع کل و دکمه نهایی کردن خرید
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: AppPadding.allMedium,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.primaryWhite,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: AppColors.cartShadow,
                   blurRadius: 4,
                   offset: const Offset(0, -2),
                 ),
@@ -241,34 +365,27 @@ class _CartPageState extends State<CartPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'جمع کل:',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: AppTextStyles.heading3,
                     ),
                     Text(
-                      '${_totalAmount.toStringAsFixed(0)} تومان',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
+                      AppUtilities.formatPrice(_totalAmount.toStringAsFixed(0)),
+                      style: AppTextStyles.heading3
+                          .copyWith(color: AppColors.cartTotalPrice),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                AppSizedBox.height16,
                 SizedBox(
                   width: double.infinity,
+                  height: AppDimensions.buttonHeight,
                   child: ElevatedButton(
                     onPressed: _showCheckoutDialog,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: const Text(
+                    style: AppButtonStyles.successButton,
+                    child: Text(
                       'نهایی کردن خرید',
-                      style: TextStyle(fontSize: 16),
+                      style: AppTextStyles.buttonText,
                     ),
                   ),
                 ),

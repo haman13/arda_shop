@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
+import '../theme.dart';
 
 class EditProductPage extends StatefulWidget {
   const EditProductPage({super.key});
@@ -13,6 +14,7 @@ class EditProductPage extends StatefulWidget {
 
 class _EditProductPageState extends State<EditProductPage> {
   List<Map<String, dynamic>> _products = [];
+  List<String> _existingCategories = [];
   bool _isLoading = true;
 
   @override
@@ -29,6 +31,31 @@ class _EditProductPageState extends State<EditProductPage> {
       _products = List<Map<String, dynamic>>.from(response);
       _isLoading = false;
     });
+    _loadExistingCategories();
+  }
+
+  Future<void> _loadExistingCategories() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final response = await supabase
+          .from('products')
+          .select('category')
+          .not('category', 'is', null);
+
+      final Set<String> categorySet = {};
+      for (final item in response) {
+        if (item['category'] != null &&
+            item['category'].toString().trim().isNotEmpty) {
+          categorySet.add(item['category'].toString().trim());
+        }
+      }
+
+      setState(() {
+        _existingCategories = categorySet.toList()..sort();
+      });
+    } catch (e) {
+      debugPrint('خطا در بارگذاری دسته‌بندی‌ها: $e');
+    }
   }
 
   void _editProduct(Map<String, dynamic> product) {
@@ -42,8 +69,15 @@ class _EditProductPageState extends State<EditProductPage> {
         TextEditingController(text: product['description'] ?? '');
     final stockController =
         TextEditingController(text: product['stock']?.toString() ?? '0');
+    final categoryController =
+        TextEditingController(text: product['category'] ?? '');
+
+    // متغیر برای دسته‌بندی انتخاب شده
+    String? selectedCategory = product['category'];
+
     double finalPrice = product['final_price']?.toDouble() ?? 0;
     String imageUrl = product['image_url'] ?? '';
+    bool isSubmitting = false;
 
     showDialog(
       context: context,
@@ -59,6 +93,55 @@ class _EditProductPageState extends State<EditProductPage> {
               });
             }
 
+            Future<void> showAddCategoryDialog() async {
+              final newCategoryController = TextEditingController();
+
+              final result = await showDialog<String>(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: const Text('اضافه کردن دسته‌بندی جدید'),
+                    content: TextField(
+                      controller: newCategoryController,
+                      decoration: const InputDecoration(
+                        labelText: 'نام دسته‌بندی',
+                        border: OutlineInputBorder(),
+                        hintText: 'مثال: لوازم الکترونیکی',
+                      ),
+                      autofocus: true,
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('انصراف'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          final categoryName =
+                              newCategoryController.text.trim();
+                          if (categoryName.isNotEmpty) {
+                            Navigator.of(context).pop(categoryName);
+                          }
+                        },
+                        child: const Text('اضافه کردن'),
+                      ),
+                    ],
+                  );
+                },
+              );
+
+              if (result != null && result.isNotEmpty) {
+                setState(() {
+                  if (!_existingCategories.contains(result)) {
+                    _existingCategories.add(result);
+                    _existingCategories.sort();
+                  }
+                  selectedCategory = result;
+                  categoryController.text = result;
+                });
+              }
+            }
+
             return AlertDialog(
               title: const Text('ویرایش محصول'),
               content: Form(
@@ -71,6 +154,7 @@ class _EditProductPageState extends State<EditProductPage> {
                         controller: nameController,
                         decoration:
                             const InputDecoration(labelText: 'نام محصول'),
+                        enabled: !isSubmitting,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'نام محصول را وارد کنید';
@@ -84,6 +168,7 @@ class _EditProductPageState extends State<EditProductPage> {
                         decoration:
                             const InputDecoration(labelText: 'قیمت (تومان)'),
                         keyboardType: TextInputType.number,
+                        enabled: !isSubmitting,
                         onChanged: (_) {
                           calculateFinalPrice();
                         },
@@ -104,6 +189,7 @@ class _EditProductPageState extends State<EditProductPage> {
                             const InputDecoration(labelText: 'تخفیف (%)'),
                         keyboardType:
                             TextInputType.numberWithOptions(decimal: true),
+                        enabled: !isSubmitting,
                         onChanged: (_) {
                           calculateFinalPrice();
                         },
@@ -126,14 +212,15 @@ class _EditProductPageState extends State<EditProductPage> {
                       Row(
                         children: [
                           const Text('مبلغ بعد از تخفیف: '),
-                          Text(finalPrice.toStringAsFixed(0)),
-                          const Text(' تومان'),
+                          Text(AppUtilities.formatPrice(
+                              finalPrice.toStringAsFixed(0))),
                         ],
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: descController,
                         decoration: const InputDecoration(labelText: 'توضیحات'),
+                        enabled: !isSubmitting,
                         maxLines: 2,
                       ),
                       const SizedBox(height: 12),
@@ -141,6 +228,7 @@ class _EditProductPageState extends State<EditProductPage> {
                         controller: stockController,
                         decoration: const InputDecoration(labelText: 'موجودی'),
                         keyboardType: TextInputType.number,
+                        enabled: !isSubmitting,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'موجودی را وارد کنید';
@@ -155,73 +243,216 @@ class _EditProductPageState extends State<EditProductPage> {
                         },
                       ),
                       const SizedBox(height: 12),
+                      // فیلد دسته‌بندی
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'دسته‌بندی:',
+                            style: AppTextStyles.formLabel,
+                          ),
+                          const SizedBox(height: 8),
+                          DropdownButtonFormField<String>(
+                            value: selectedCategory,
+                            decoration: AppInputDecorations.categoryDropdown,
+                            items: [
+                              ..._existingCategories.map((category) {
+                                return DropdownMenuItem(
+                                  value: category,
+                                  child: Text(category),
+                                );
+                              }),
+                              DropdownMenuItem(
+                                value: 'ADD_NEW_CATEGORY',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.add,
+                                        color: AppColors.adminAddCategory),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'اضافه کردن دسته‌بندی جدید',
+                                      style: AppTextStyles.linkText.copyWith(
+                                        color: AppColors.adminAddCategory,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            onChanged: isSubmitting
+                                ? null
+                                : (value) {
+                                    if (value == 'ADD_NEW_CATEGORY') {
+                                      showAddCategoryDialog();
+                                    } else if (value != null) {
+                                      setState(() {
+                                        selectedCategory = value;
+                                        categoryController.text = value;
+                                      });
+                                    }
+                                  },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'دسته‌بندی را انتخاب کنید';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'دسته‌بندی انتخاب شده: ${categoryController.text.isEmpty ? "انتخاب نشده" : categoryController.text}',
+                            style: AppTextStyles.greyText,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
                       imageUrl.isNotEmpty
                           ? Stack(
                               alignment: Alignment.topRight,
                               children: [
                                 Image.network(imageUrl, height: 100),
                                 IconButton(
-                                  icon: const Icon(Icons.camera_alt,
-                                      color: Colors.blue),
-                                  onPressed: () async {
-                                    await showDialog(
-                                      context: context,
-                                      builder: (context) => _EditImageDialog(
-                                        productId: product['id'],
-                                        oldImageUrl: imageUrl,
-                                        onImageUpdated: (String newUrl) {
-                                          setState(() {
-                                            imageUrl = newUrl;
-                                          });
+                                  icon: Icon(Icons.camera_alt,
+                                      color: AppColors.primaryBlue),
+                                  onPressed: isSubmitting
+                                      ? null
+                                      : () async {
+                                          await showDialog(
+                                            context: context,
+                                            builder: (context) =>
+                                                _EditImageDialog(
+                                              productId: product['id'],
+                                              oldImageUrl: imageUrl,
+                                              onImageUpdated: (String newUrl) {
+                                                setState(() {
+                                                  imageUrl = newUrl;
+                                                });
+                                              },
+                                            ),
+                                          );
                                         },
-                                      ),
-                                    );
-                                  },
                                 ),
                               ],
                             )
                           : const SizedBox.shrink(),
+
+                      // نمایش وضعیت loading
+                      if (isSubmitting) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: AppPadding.allMedium,
+                          decoration: AppDecorations.loadingContainer,
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.primaryBlue,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'در حال ذخیره تغییرات محصول...',
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    color: AppColors.primaryBlue,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('انصراف'),
+                  onPressed: isSubmitting ? null : () => Navigator.pop(context),
+                  style: AppButtonStyles.transparentButton,
+                  child: Text(
+                    'انصراف',
+                    style: AppTextStyles.linkText,
+                  ),
                 ),
                 ElevatedButton(
-                  onPressed: () async {
-                    if (!_editFormKey.currentState!.validate()) return;
-                    calculateFinalPrice();
-                    final supabase = Supabase.instance.client;
-                    try {
-                      final response = await supabase.from('products').update({
-                        'name': nameController.text,
-                        'price': double.tryParse(priceController.text) ?? 0,
-                        'discount':
-                            double.tryParse(discountController.text) ?? 0,
-                        'final_price': finalPrice,
-                        'description': descController.text,
-                        'stock': int.tryParse(stockController.text) ?? 0,
-                      }).eq('id', product['id']);
-                      print('update response: $response');
-                      if (mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('محصول با موفقیت ویرایش شد!')),
-                        );
-                        _fetchProducts();
-                      }
-                    } catch (e) {
-                      print('update error: $e');
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('خطا در ویرایش محصول: $e')),
-                      );
-                    }
-                  },
-                  child: const Text('ذخیره تغییرات'),
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          if (!_editFormKey.currentState!.validate()) return;
+
+                          setState(() => isSubmitting = true);
+
+                          try {
+                            calculateFinalPrice();
+                            final supabase = Supabase.instance.client;
+                            final response =
+                                await supabase.from('products').update({
+                              'name': nameController.text,
+                              'price':
+                                  double.tryParse(priceController.text) ?? 0,
+                              'discount':
+                                  double.tryParse(discountController.text) ?? 0,
+                              'final_price': finalPrice,
+                              'description': descController.text,
+                              'stock': int.tryParse(stockController.text) ?? 0,
+                              'category': categoryController.text,
+                            }).eq('id', product['id']);
+                            debugPrint('update response: $response');
+                            if (mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'محصول با موفقیت ویرایش شد!',
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                      color: AppColors.primaryWhite,
+                                    ),
+                                  ),
+                                  backgroundColor: AppColors.successGreen,
+                                ),
+                              );
+                              _fetchProducts();
+                            }
+                          } catch (e) {
+                            debugPrint('update error: $e');
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'خطا در ویرایش محصول: $e',
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                      color: AppColors.primaryWhite,
+                                    ),
+                                  ),
+                                  backgroundColor: AppColors.errorRed,
+                                ),
+                              );
+                            }
+                          } finally {
+                            if (mounted) {
+                              setState(() => isSubmitting = false);
+                            }
+                          }
+                        },
+                  style: AppButtonStyles.primaryButton,
+                  child: isSubmitting
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.loadingIndicator,
+                          ),
+                        )
+                      : Text(
+                          'ذخیره تغییرات',
+                          style: AppTextStyles.buttonText,
+                        ),
                 ),
               ],
             );
@@ -235,11 +466,21 @@ class _EditProductPageState extends State<EditProductPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ویرایش محصولات'),
+        backgroundColor: AppColors.appBarBackground,
+        title: Text(
+          'ویرایش محصولات',
+          style: AppTextStyles.heading2,
+        ),
         centerTitle: true,
+        elevation: 0.0,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+              child: CircularProgressIndicator(
+                color: AppColors.primaryBlue,
+                strokeWidth: AppDimensions.loadingStrokeWidth,
+              ),
+            )
           : ListView.builder(
               itemCount: _products.length,
               itemBuilder: (context, index) {
@@ -256,17 +497,15 @@ class _EditProductPageState extends State<EditProductPage> {
                       ),
                       if ((product['stock'] ?? 0) <= 0)
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
+                          padding: AppPadding.symmetricHorizontalLargeVertical4,
                           decoration: BoxDecoration(
-                            color: Colors.red,
+                            color: AppColors.errorRed,
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: const Text(
+                          child: Text(
                             'ناموجود',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.primaryWhite,
                             ),
                           ),
                         ),
@@ -275,8 +514,15 @@ class _EditProductPageState extends State<EditProductPage> {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('قیمت: ${product['price']} تومان'),
+                      Text(
+                          'قیمت: ${AppUtilities.formatPrice(product['price'])}'),
                       Text('موجودی: ${product['stock'] ?? 0} عدد'),
+                      if (product['category'] != null &&
+                          product['category'].toString().isNotEmpty)
+                        Text(
+                          'دسته‌بندی: ${product['category']}',
+                          style: AppTextStyles.categoryText,
+                        ),
                     ],
                   ),
                   trailing: IconButton(
@@ -381,7 +627,10 @@ class _EditImageDialogState extends State<_EditImageDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('ویرایش عکس محصول'),
+      title: Text(
+        'ویرایش عکس محصول',
+        style: AppTextStyles.heading3,
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -390,28 +639,47 @@ class _EditImageDialogState extends State<_EditImageDialog> {
           else if (_selectedImage != null)
             Image.file(_selectedImage!, height: 120)
           else
-            const Text('عکسی انتخاب نشده است'),
-          const SizedBox(height: 16),
+            Text(
+              'عکسی انتخاب نشده است',
+              style: AppTextStyles.greyText,
+            ),
+          AppSizedBox.height16,
           ElevatedButton.icon(
             onPressed: _isLoading ? null : _pickImage,
+            style: AppButtonStyles.primaryButton,
             icon: const Icon(Icons.image),
-            label: const Text('انتخاب عکس جدید'),
+            label: Text(
+              'انتخاب عکس جدید',
+              style: AppTextStyles.buttonText,
+            ),
           ),
         ],
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('انصراف'),
+          style: AppButtonStyles.transparentButton,
+          child: Text(
+            'انصراف',
+            style: AppTextStyles.linkText,
+          ),
         ),
         ElevatedButton(
           onPressed: _isLoading ? null : _uploadAndUpdate,
+          style: AppButtonStyles.primaryButton,
           child: _isLoading
-              ? const SizedBox(
+              ? SizedBox(
                   width: 20,
                   height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('ذخیره عکس جدید'),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.loadingIndicator,
+                  ),
+                )
+              : Text(
+                  'ذخیره عکس جدید',
+                  style: AppTextStyles.buttonText,
+                ),
         ),
       ],
     );

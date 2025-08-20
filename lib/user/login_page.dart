@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../admin/dashbord.dart';
+import '../theme.dart';
 import 'register_page.dart';
 import 'home_page.dart';
 import 'package:provider/provider.dart';
@@ -31,30 +32,67 @@ class _LoginPageState extends State<LoginPage> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
+        // بررسی ورود ادمین hardcoded
+        if (_phoneController.text == adminPhone &&
+            _passwordController.text == adminPassword) {
+          if (mounted) {
+            await Provider.of<UserProvider>(context, listen: false).login(
+              name: 'ادمین',
+              phone: adminPhone,
+            );
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const AdminDashboard()),
+            );
+          }
+          return;
+        }
+
         final supabase = Supabase.instance.client;
-        final users = await supabase.from('users').select();
-        // print(users);
 
         final user = await supabase
             .from('users')
-            .select()
+            .select('*, is_blocked, block_reason')
             .eq('phone', _phoneController.text)
             .eq('password', _passwordController.text)
             .maybeSingle();
-        // print(user);
 
         if (user == null) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                  content: Text('شماره تماس یا رمز عبور اشتباه است')),
+              SnackBar(
+                content: Text(
+                  'شماره تماس یا رمز عبور اشتباه است',
+                  style: AppTextStyles.bodyMedium
+                      .copyWith(color: AppColors.primaryWhite),
+                ),
+                backgroundColor: AppColors.errorRed,
+              ),
+            );
+          }
+          return;
+        }
+
+        // Check if user is blocked
+        if (user['is_blocked'] == true) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'حساب کاربری شما مسدود شده است.\nدلیل: ${user['block_reason'] ?? 'نامشخص'}',
+                  style: AppTextStyles.bodyMedium
+                      .copyWith(color: AppColors.primaryWhite),
+                ),
+                backgroundColor: AppColors.errorRed,
+                duration: const Duration(seconds: 5),
+              ),
             );
           }
           return;
         }
 
         if (mounted) {
-          Provider.of<UserProvider>(context, listen: false).login(
+          await Provider.of<UserProvider>(context, listen: false).login(
             name: user['name'],
             phone: user['phone'],
           );
@@ -73,7 +111,14 @@ class _LoginPageState extends State<LoginPage> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('خطا در ورود: $e')),
+            SnackBar(
+              content: Text(
+                'خطا در ورود: $e',
+                style: AppTextStyles.bodyMedium
+                    .copyWith(color: AppColors.primaryWhite),
+              ),
+              backgroundColor: AppColors.errorRed,
+            ),
           );
         }
       } finally {
@@ -88,12 +133,16 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('ورود به سیستم'),
+        backgroundColor: AppColors.appBarBackground,
+        title: Text(
+          'ورود به سیستم',
+          style: AppTextStyles.heading2,
+        ),
         centerTitle: true,
+        elevation: 0.0,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: AppPadding.allMedium,
         child: Form(
           key: _formKey,
           child: Column(
@@ -101,12 +150,12 @@ class _LoginPageState extends State<LoginPage> {
             children: [
               TextFormField(
                 controller: _phoneController,
-                decoration: const InputDecoration(
-                  labelText: 'شماره تماس',
-                  border: OutlineInputBorder(),
-                  hintText: '09xxxxxxxxx',
+                decoration: AppInputDecorations.formField(
+                  'شماره تماس',
+                  hint: '09xxxxxxxxx',
                 ),
                 keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.next,
                 maxLength: 11,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
@@ -124,14 +173,17 @@ class _LoginPageState extends State<LoginPage> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              AppSizedBox.height16,
               TextFormField(
                 controller: _passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'رمز عبور',
-                  border: OutlineInputBorder(),
-                ),
+                decoration: AppInputDecorations.formField('رمز عبور'),
                 obscureText: true,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) {
+                  if (!_isLoading) {
+                    _login();
+                  }
+                },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'لطفاً رمز عبور را وارد کنید';
@@ -139,17 +191,29 @@ class _LoginPageState extends State<LoginPage> {
                   return null;
                 },
               ),
-              const SizedBox(height: 24),
+              AppSizedBox.height24,
               SizedBox(
                 width: double.infinity,
+                height: AppDimensions.buttonHeight,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _login,
+                  style: AppButtonStyles.primaryButton,
                   child: _isLoading
-                      ? const CircularProgressIndicator()
-                      : const Text('ورود'),
+                      ? SizedBox(
+                          width: AppDimensions.loadingIndicatorWidth,
+                          height: AppDimensions.loadingIndicatorHeight,
+                          child: CircularProgressIndicator(
+                            color: AppColors.loadingIndicator,
+                            strokeWidth: AppDimensions.loadingStrokeWidth,
+                          ),
+                        )
+                      : Text(
+                          'ورود',
+                          style: AppTextStyles.buttonText,
+                        ),
                 ),
               ),
-              const SizedBox(height: 16),
+              AppSizedBox.height16,
               TextButton(
                 onPressed: () {
                   Navigator.push(
@@ -158,7 +222,11 @@ class _LoginPageState extends State<LoginPage> {
                         builder: (context) => const RegisterPage()),
                   );
                 },
-                child: const Text('ثبت‌نام'),
+                style: AppButtonStyles.transparentButton,
+                child: Text(
+                  'ثبت‌نام',
+                  style: AppTextStyles.linkText,
+                ),
               ),
             ],
           ),

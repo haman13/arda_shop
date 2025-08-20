@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../theme.dart';
 
 class NewProductDialog extends StatefulWidget {
   const NewProductDialog({super.key});
@@ -19,10 +20,97 @@ class _NewProductDialogState extends State<NewProductDialog> {
   final _descController = TextEditingController();
   final _discountController = TextEditingController();
   final _stockController = TextEditingController();
+  final _categoryController = TextEditingController();
+
+  // دسته‌بندی‌های موجود در دیتابیس
+  List<String> _existingCategories = [];
+  String? _selectedCategory;
+  bool _isLoadingCategories = true;
+  bool _isSubmitting = false;
+
   double _finalPrice = 0;
   File? _selectedImage;
   Uint8List? _webImageBytes;
   XFile? _pickedFile;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingCategories();
+  }
+
+  Future<void> _loadExistingCategories() async {
+    setState(() => _isLoadingCategories = true);
+    try {
+      final supabase = Supabase.instance.client;
+      final response = await supabase
+          .from('products')
+          .select('category')
+          .not('category', 'is', null);
+
+      final Set<String> categorySet = {};
+      for (final item in response) {
+        if (item['category'] != null &&
+            item['category'].toString().trim().isNotEmpty) {
+          categorySet.add(item['category'].toString().trim());
+        }
+      }
+
+      setState(() {
+        _existingCategories = categorySet.toList()..sort();
+        _isLoadingCategories = false;
+      });
+    } catch (e) {
+      // Log error for debugging
+      debugPrint('خطا در بارگذاری دسته‌بندی‌ها: $e');
+      setState(() => _isLoadingCategories = false);
+    }
+  }
+
+  Future<void> _showAddCategoryDialog() async {
+    final newCategoryController = TextEditingController();
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('اضافه کردن دسته‌بندی جدید'),
+          content: TextField(
+            controller: newCategoryController,
+            decoration: AppInputDecorations.formField('نام دسته‌بندی',
+                hint: 'مثال: لوازم الکترونیکی'),
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('انصراف'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final categoryName = newCategoryController.text.trim();
+                if (categoryName.isNotEmpty) {
+                  Navigator.of(context).pop(categoryName);
+                }
+              },
+              child: const Text('اضافه کردن'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != null && result.isNotEmpty) {
+      setState(() {
+        if (!_existingCategories.contains(result)) {
+          _existingCategories.add(result);
+          _existingCategories.sort();
+        }
+        _selectedCategory = result;
+        _categoryController.text = result;
+      });
+    }
+  }
 
   void _calculateFinalPrice() {
     final price = double.tryParse(_priceController.text) ?? 0;
@@ -49,60 +137,87 @@ class _NewProductDialogState extends State<NewProductDialog> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // بررسی انتخاب دسته‌بندی
+    if (_categoryController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('لطفاً دسته‌بندی را انتخاب کنید')),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
     String? imageUrl;
-    final fileName = DateTime.now().millisecondsSinceEpoch.toString() + '.jpg';
+    final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
     final bucket = 'product-images';
     final path = 'products/$fileName';
     final supabase = Supabase.instance.client;
 
-    if (kIsWeb && _webImageBytes != null) {
-      print('Uploading image (web)...');
-      final storageResponse = await supabase.storage
-          .from(bucket)
-          .uploadBinary(path, _webImageBytes!);
-      print('Upload response: $storageResponse');
-      if (storageResponse.isEmpty) {
-        print('Upload failed');
-        return;
-      }
-      imageUrl = supabase.storage.from(bucket).getPublicUrl(path);
-    } else if (!kIsWeb && _selectedImage != null) {
-      print('Uploading image (mobile)...');
-      final storageResponse =
-          await supabase.storage.from(bucket).upload(path, _selectedImage!);
-      print('Upload response: $storageResponse');
-      if (storageResponse.isEmpty) {
-        print('Upload failed');
-        return;
-      }
-      imageUrl = supabase.storage.from(bucket).getPublicUrl(path);
-    } else {
-      print('No image selected');
-      return;
-    }
-
-    print('imageUrl: $imageUrl');
-
     try {
+      if (kIsWeb && _webImageBytes != null) {
+        debugPrint('Uploading image (web)...');
+        final storageResponse = await supabase.storage
+            .from(bucket)
+            .uploadBinary(path, _webImageBytes!);
+        debugPrint('Upload response: $storageResponse');
+        if (storageResponse.isEmpty) {
+          debugPrint('Upload failed');
+          throw Exception('آپلود تصویر ناموفق بود');
+        }
+        imageUrl = supabase.storage.from(bucket).getPublicUrl(path);
+      } else if (!kIsWeb && _selectedImage != null) {
+        debugPrint('Uploading image (mobile)...');
+        final storageResponse =
+            await supabase.storage.from(bucket).upload(path, _selectedImage!);
+        debugPrint('Upload response: $storageResponse');
+        if (storageResponse.isEmpty) {
+          debugPrint('Upload failed');
+          throw Exception('آپلود تصویر ناموفق بود');
+        }
+        imageUrl = supabase.storage.from(bucket).getPublicUrl(path);
+      } else {
+        debugPrint('No image selected');
+        throw Exception('لطفاً تصویر محصول را انتخاب کنید');
+      }
+
+      debugPrint('imageUrl: $imageUrl');
+
       final insertResponse = await supabase.from('products').insert({
         'name': _nameController.text,
         'price': double.tryParse(_priceController.text) ?? 0,
         'discount': double.tryParse(_discountController.text) ?? 0,
         'final_price': _finalPrice,
         'description': _descController.text,
+        'category': _categoryController.text.trim(),
         'image_url': imageUrl,
         'stock': int.tryParse(_stockController.text) ?? 0,
       });
-      print('insertResponse: $insertResponse');
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('محصول با موفقیت اضافه شد!')),
-      );
+      debugPrint('insertResponse: $insertResponse');
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('محصول با موفقیت اضافه شد!'),
+            backgroundColor: AppColors.successGreen,
+          ),
+        );
+      }
     } catch (e) {
-      print('Insert error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطا در ثبت محصول: $e')),
-      );
+      debugPrint('Insert error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطا در ثبت محصول: $e'),
+            backgroundColor: AppColors.errorRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -118,7 +233,8 @@ class _NewProductDialogState extends State<NewProductDialog> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'نام محصول'),
+                decoration: AppInputDecorations.formField('نام محصول'),
+                enabled: !_isSubmitting,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'نام محصول را وارد کنید';
@@ -126,11 +242,12 @@ class _NewProductDialogState extends State<NewProductDialog> {
                   return null;
                 },
               ),
-              const SizedBox(height: 12),
+              AppSizedBox.height12,
               TextFormField(
                 controller: _priceController,
-                decoration: const InputDecoration(labelText: 'قیمت (تومان)'),
+                decoration: AppInputDecorations.formField('قیمت (تومان)'),
                 keyboardType: TextInputType.number,
+                enabled: !_isSubmitting,
                 onChanged: (_) => _calculateFinalPrice(),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -142,11 +259,12 @@ class _NewProductDialogState extends State<NewProductDialog> {
                   return null;
                 },
               ),
-              const SizedBox(height: 12),
+              AppSizedBox.height12,
               TextFormField(
                 controller: _discountController,
-                decoration: const InputDecoration(labelText: 'تخفیف (%)'),
+                decoration: AppInputDecorations.formField('تخفیف (%)'),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
+                enabled: !_isSubmitting,
                 onChanged: (_) => _calculateFinalPrice(),
                 validator: (value) {
                   if (value != null &&
@@ -163,25 +281,27 @@ class _NewProductDialogState extends State<NewProductDialog> {
                   return null;
                 },
               ),
-              const SizedBox(height: 12),
+              AppSizedBox.height12,
               Row(
                 children: [
                   const Text('مبلغ بعد از تخفیف: '),
-                  Text(_finalPrice.toStringAsFixed(0)),
-                  const Text(' تومان'),
+                  Text(
+                      AppUtilities.formatPrice(_finalPrice.toStringAsFixed(0))),
                 ],
               ),
-              const SizedBox(height: 12),
+              AppSizedBox.height12,
               TextFormField(
                 controller: _descController,
-                decoration: const InputDecoration(labelText: 'توضیحات'),
+                decoration: AppInputDecorations.formField('توضیحات'),
+                enabled: !_isSubmitting,
                 maxLines: 2,
               ),
-              const SizedBox(height: 12),
+              AppSizedBox.height12,
               TextFormField(
                 controller: _stockController,
-                decoration: const InputDecoration(labelText: 'موجودی'),
+                decoration: AppInputDecorations.formField('موجودی'),
                 keyboardType: TextInputType.number,
+                enabled: !_isSubmitting,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'موجودی را وارد کنید';
@@ -195,30 +315,160 @@ class _NewProductDialogState extends State<NewProductDialog> {
                   return null;
                 },
               ),
-              const SizedBox(height: 12),
+              AppSizedBox.height12,
+
+              // فیلد دسته‌بندی
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'دسته‌بندی:',
+                    style: AppTextStyles.formLabel,
+                  ),
+                  AppSizedBox.height8,
+                  if (_isLoadingCategories)
+                    Center(
+                      child: Padding(
+                        padding: AppPadding.allMedium,
+                        child: const CircularProgressIndicator(),
+                      ),
+                    )
+                  else ...[
+                    DropdownButtonFormField<String>(
+                      value: _selectedCategory,
+                      decoration: AppInputDecorations.categoryDropdown,
+                      items: [
+                        ..._existingCategories.map((category) {
+                          return DropdownMenuItem(
+                            value: category,
+                            child: Text(category),
+                          );
+                        }),
+                        DropdownMenuItem(
+                          value: 'ADD_NEW_CATEGORY',
+                          child: Row(
+                            children: [
+                              Icon(Icons.add,
+                                  color: AppColors.adminAddCategory),
+                              AppSizedBox.width8,
+                              Text(
+                                'اضافه کردن دسته‌بندی جدید',
+                                style: AppTextStyles.linkText.copyWith(
+                                  color: AppColors.adminAddCategory,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      onChanged: _isSubmitting
+                          ? null
+                          : (value) {
+                              if (value == 'ADD_NEW_CATEGORY') {
+                                _showAddCategoryDialog();
+                              } else if (value != null) {
+                                setState(() {
+                                  _selectedCategory = value;
+                                  _categoryController.text = value;
+                                });
+                              }
+                            },
+                    ),
+                    AppSizedBox.height8,
+                    Text(
+                      'دسته‌بندی انتخاب شده: ${_categoryController.text.isEmpty ? "انتخاب نشده" : _categoryController.text}',
+                      style: AppTextStyles.greyText,
+                    ),
+                  ],
+                ],
+              ),
+              AppSizedBox.height12,
               ElevatedButton.icon(
-                onPressed: _pickImage,
-                icon: Icon(Icons.image),
-                label: Text('انتخاب عکس محصول'),
+                onPressed: _isSubmitting ? null : _pickImage,
+                style: AppButtonStyles.primaryButton,
+                icon: const Icon(Icons.image),
+                label: Text(
+                  'انتخاب عکس محصول',
+                  style: AppTextStyles.buttonText,
+                ),
               ),
               if (kIsWeb && _webImageBytes != null)
-                Image.memory(_webImageBytes!, height: 100),
+                Image.memory(_webImageBytes!,
+                    height: AppDimensions.productImageHeight),
               if (!kIsWeb && _selectedImage != null)
-                Image.file(_selectedImage!, height: 100),
+                Image.file(_selectedImage!,
+                    height: AppDimensions.productImageHeight),
+
+              // نمایش وضعیت loading
+              if (_isSubmitting) ...[
+                AppSizedBox.height16,
+                Container(
+                  padding: AppPadding.allMedium,
+                  decoration: AppDecorations.loadingContainer,
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: AppDimensions.loadingIndicatorWidth,
+                        height: AppDimensions.loadingIndicatorHeight,
+                        child: CircularProgressIndicator(
+                            strokeWidth: AppDimensions.loadingStrokeWidth),
+                      ),
+                      AppSizedBox.width12,
+                      Expanded(
+                        child: Text(
+                          'در حال آپلود تصویر و اضافه کردن محصول...',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.primaryBlue,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('انصراف'),
+          onPressed: _isSubmitting ? null : () => Navigator.pop(context),
+          style: AppButtonStyles.transparentButton,
+          child: Text(
+            'انصراف',
+            style: AppTextStyles.linkText,
+          ),
         ),
         ElevatedButton(
-          onPressed: _submit,
-          child: const Text('افزودن'),
+          onPressed: _isSubmitting ? null : _submit,
+          style: AppButtonStyles.primaryButton,
+          child: _isSubmitting
+              ? SizedBox(
+                  width: AppDimensions.loadingIndicatorWidth,
+                  height: AppDimensions.loadingIndicatorHeight,
+                  child: CircularProgressIndicator(
+                    strokeWidth: AppDimensions.loadingStrokeWidth,
+                    color: AppColors.loadingIndicator,
+                  ),
+                )
+              : Text(
+                  'افزودن',
+                  style: AppTextStyles.buttonText,
+                ),
         ),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _priceController.dispose();
+    _descController.dispose();
+    _discountController.dispose();
+    _stockController.dispose();
+    _categoryController.dispose();
+    super.dispose();
   }
 }

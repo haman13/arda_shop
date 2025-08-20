@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../theme.dart';
+import 'login_page.dart';
+import 'home_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -34,27 +38,37 @@ class _RegisterPageState extends State<RegisterPage> {
       if (existingUser != null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text(
-                    'این شماره موبایل قبلاً ثبت شده است. لطفاً با شماره دیگری تلاش کنید یا وارد شوید.')),
+            SnackBar(
+              content: Text(
+                'این شماره موبایل قبلاً ثبت شده است. لطفاً با شماره دیگری تلاش کنید یا وارد شوید.',
+                style: AppTextStyles.bodyMedium
+                    .copyWith(color: AppColors.primaryWhite),
+              ),
+              backgroundColor: AppColors.warningOrange,
+            ),
           );
         }
         return;
       }
 
       // ثبت کاربر جدید
-      final response = await supabase.from('users').insert({
+      await supabase.from('users').insert({
         'name': _nameController.text,
         'phone': _phoneController.text,
         'password': _passwordController.text, // در حالت واقعی باید رمزنگاری شود
         'created_at': DateTime.now().toIso8601String(),
       });
 
-      print(response);
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ثبت نام با موفقیت انجام شد')),
+          SnackBar(
+            content: Text(
+              'ثبت نام با موفقیت انجام شد',
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.primaryWhite),
+            ),
+            backgroundColor: AppColors.successGreen,
+          ),
         );
         // پاک کردن فرم
         _nameController.clear();
@@ -68,7 +82,14 @@ class _RegisterPageState extends State<RegisterPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطا در ثبت نام: $e')),
+          SnackBar(
+            content: Text(
+              'خطا در ثبت نام: $e',
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.primaryWhite),
+            ),
+            backgroundColor: AppColors.errorRed,
+          ),
         );
       }
     } finally {
@@ -82,11 +103,16 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ثبت نام'),
+        backgroundColor: AppColors.appBarBackground,
+        title: Text(
+          'ثبت نام',
+          style: AppTextStyles.heading2,
+        ),
         centerTitle: true,
+        elevation: 0.0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: AppPadding.allMedium,
         child: Form(
           key: _formKey,
           child: Column(
@@ -94,10 +120,7 @@ class _RegisterPageState extends State<RegisterPage> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'نام و نام خانوادگی',
-                  border: OutlineInputBorder(),
-                ),
+                decoration: AppInputDecorations.formField('نام و نام خانوادگی'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'لطفاً نام و نام خانوادگی را وارد کنید';
@@ -105,31 +128,35 @@ class _RegisterPageState extends State<RegisterPage> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              AppSizedBox.height16,
               TextFormField(
                 controller: _phoneController,
-                decoration: const InputDecoration(
-                  labelText: 'شماره موبایل',
-                  border: OutlineInputBorder(),
+                decoration: AppInputDecorations.formField(
+                  'شماره موبایل',
+                  hint: '09xxxxxxxxx',
                 ),
                 keyboardType: TextInputType.phone,
+                maxLength: 11,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                ],
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'لطفاً شماره موبایل را وارد کنید';
                   }
-                  if (!RegExp(r'^09[0-9]{9}$').hasMatch(value)) {
-                    return 'شماره موبایل باید با ۰۹ شروع شود و ۱۱ رقم باشد';
+                  if (value.length != 11) {
+                    return 'شماره موبایل باید ۱۱ رقم باشد';
+                  }
+                  if (!value.startsWith('09')) {
+                    return 'شماره موبایل باید با ۰۹ شروع شود';
                   }
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              AppSizedBox.height16,
               TextFormField(
                 controller: _passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'رمز عبور',
-                  border: OutlineInputBorder(),
-                ),
+                decoration: AppInputDecorations.formField('رمز عبور'),
                 obscureText: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -141,13 +168,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              AppSizedBox.height16,
               TextFormField(
                 controller: _confirmPasswordController,
-                decoration: const InputDecoration(
-                  labelText: 'تکرار رمز عبور',
-                  border: OutlineInputBorder(),
-                ),
+                decoration: AppInputDecorations.formField('تکرار رمز عبور'),
                 obscureText: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -159,26 +183,26 @@ class _RegisterPageState extends State<RegisterPage> {
                   return null;
                 },
               ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _register,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+              AppSizedBox.height24,
+              SizedBox(
+                height: AppDimensions.buttonHeight,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _register,
+                  style: AppButtonStyles.primaryButton,
+                  child: _isLoading
+                      ? SizedBox(
+                          width: AppDimensions.loadingIndicatorWidth,
+                          height: AppDimensions.loadingIndicatorHeight,
+                          child: CircularProgressIndicator(
+                            color: AppColors.loadingIndicator,
+                            strokeWidth: AppDimensions.loadingStrokeWidth,
+                          ),
+                        )
+                      : Text(
+                          'ثبت نام',
+                          style: AppTextStyles.buttonText,
                         ),
-                      )
-                    : const Text(
-                        'ثبت نام',
-                        style: TextStyle(fontSize: 16),
-                      ),
+                ),
               ),
             ],
           ),

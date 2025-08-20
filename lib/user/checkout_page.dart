@@ -1,5 +1,11 @@
+// ignore_for_file: prefer_final_fields
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
+import '../theme.dart';
+import 'user_provider.dart';
+import 'payment_page.dart';
 
 class CheckoutPage extends StatefulWidget {
   final List<Map<String, dynamic>> cartItems;
@@ -18,11 +24,54 @@ class CheckoutPage extends StatefulWidget {
 class _CheckoutPageState extends State<CheckoutPage> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _isLoadingUserData = true;
 
   // اطلاعات آدرس و تماس
   final _addressController = TextEditingController();
   final _phoneController = TextEditingController();
   final _postalCodeController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfileData();
+  }
+
+  Future<void> _loadUserProfileData() async {
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+      if (!userProvider.isLoggedIn || userProvider.userPhone == null) {
+        setState(() => _isLoadingUserData = false);
+        return;
+      }
+
+      final supabase = Supabase.instance.client;
+
+      // گرفتن اطلاعات کامل کاربر از دیتابیس
+      final userData = await supabase
+          .from('users')
+          .select('name, phone, address, postal_code')
+          .eq('phone', userProvider.userPhone!)
+          .single();
+
+      setState(() {
+        // اگر اطلاعات در پروفایل موجود باشه، اونا رو بار کن
+        _phoneController.text =
+            userData['phone'] ?? userProvider.userPhone ?? '';
+        _addressController.text = userData['address'] ?? '';
+        _postalCodeController.text = userData['postal_code'] ?? '';
+        _isLoadingUserData = false;
+      });
+    } catch (e) {
+      // اگر خطا بود، حداقل شماره تلفن رو از UserProvider بگیر
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      setState(() {
+        _phoneController.text = userProvider.userPhone ?? '';
+        _isLoadingUserData = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -32,62 +81,25 @@ class _CheckoutPageState extends State<CheckoutPage> {
     super.dispose();
   }
 
-  Future<void> _submitOrder() async {
+  Future<void> _proceedToPayment() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    // انتقال به صفحه پرداخت
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PaymentPage(
+          cartItems: widget.cartItems,
+          totalAmount: widget.totalAmount,
+          shippingAddress: _addressController.text,
+          phone: _phoneController.text,
+          postalCode: _postalCodeController.text,
+        ),
+      ),
+    );
 
-    try {
-      final supabase = Supabase.instance.client;
-      final userId = supabase.auth.currentUser?.id;
-
-      if (userId == null) {
-        throw Exception('کاربر وارد نشده است');
-      }
-
-      // ایجاد سفارش جدید
-      final orderResponse = await supabase.from('orders').insert({
-        'user_id': userId,
-        'total_amount': widget.totalAmount,
-        'status': 'pending',
-        'shipping_address': _addressController.text,
-        'phone': _phoneController.text,
-        'postal_code': _postalCodeController.text,
-      }).select();
-
-      final orderId = orderResponse[0]['id'];
-
-      // ایجاد آیتم‌های سفارش
-      for (var item in widget.cartItems) {
-        final product = item['products'] as Map<String, dynamic>;
-        await supabase.from('order_items').insert({
-          'order_id': orderId,
-          'product_id': product['id'],
-          'quantity': item['quantity'],
-          'price': product['final_price'],
-        });
-      }
-
-      // پاک کردن سبد خرید
-      await supabase.from('cart_items').delete().eq('user_id', userId);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('سفارش شما با موفقیت ثبت شد')),
-        );
-        Navigator.of(context)
-            .pop(true); // برگشت به صفحه قبل با نشان دادن موفقیت
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطا در ثبت سفارش: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+    // اگر پرداخت موفق بود، برگشت به صفحه قبل
+    if (result == true && mounted) {
+      Navigator.of(context).pop(true);
     }
   }
 
@@ -95,110 +107,177 @@ class _CheckoutPageState extends State<CheckoutPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('نهایی کردن خرید'),
+        backgroundColor: AppColors.appBarBackground,
+        title: Text(
+          'نهایی کردن خرید',
+          style: AppTextStyles.heading2,
+        ),
         centerTitle: true,
+        elevation: 0.0,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // خلاصه سفارش
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'خلاصه سفارش',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+          ? Center(
+              child: CircularProgressIndicator(
+                color: AppColors.primaryBlue,
+                strokeWidth: AppDimensions.loadingStrokeWidth,
+              ),
+            )
+          : _isLoadingUserData
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        color: AppColors.primaryBlue,
+                        strokeWidth: AppDimensions.loadingStrokeWidth,
+                      ),
+                      AppSizedBox.height16,
+                      Text(
+                        'در حال بارگذاری اطلاعات...',
+                        style: AppTextStyles.bodyMedium,
+                      ),
+                    ],
+                  ),
+                )
+              : SingleChildScrollView(
+                  padding: AppPadding.allMedium,
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // اطلاع‌رسانی در صورت وجود اطلاعات از پروفایل
+                        if (_addressController.text.isNotEmpty ||
+                            _postalCodeController.text.isNotEmpty)
+                          Container(
+                            padding: AppPadding.allSmall,
+                            margin: const EdgeInsets.only(
+                                bottom: AppDimensions.paddingMedium),
+                            decoration: BoxDecoration(
+                              color: AppColors.adminLoadingBackground,
+                              borderRadius: AppBorderRadius.small,
+                              border: Border.all(
+                                color: AppColors.adminLoadingBorder,
+                                width: 1,
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Text('تعداد محصولات: ${widget.cartItems.length}'),
-                            Text('مبلغ کل: ${widget.totalAmount} تومان'),
-                          ],
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  color: AppColors.primaryBlue,
+                                  size: 20,
+                                ),
+                                AppSizedBox.width8,
+                                Expanded(
+                                  child: Text(
+                                    'اطلاعات از پروفایل شما بارگذاری شد. در صورت نیاز می‌توانید تغییر دهید.',
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.primaryBlue,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                        // خلاصه سفارش
+                        Container(
+                          decoration: AppDecorations.cartItemShadow,
+                          child: Card(
+                            elevation: 0,
+                            child: Padding(
+                              padding: AppPadding.allMedium,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'خلاصه سفارش',
+                                    style: AppTextStyles.heading3,
+                                  ),
+                                  AppSizedBox.height8,
+                                  Text(
+                                    'تعداد محصولات: ${widget.cartItems.length}',
+                                    style: AppTextStyles.bodyMedium,
+                                  ),
+                                  AppSizedBox.height4,
+                                  Text(
+                                    'مبلغ کل: ${AppUtilities.formatPrice(widget.totalAmount.toStringAsFixed(0))}',
+                                    style: AppTextStyles.productPrice.copyWith(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
+                        AppSizedBox.height16,
 
-                    // فرم اطلاعات ارسال
-                    TextFormField(
-                      controller: _addressController,
-                      decoration: const InputDecoration(
-                        labelText: 'آدرس کامل',
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLines: 3,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'لطفاً آدرس را وارد کنید';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
+                        // فرم اطلاعات ارسال
+                        TextFormField(
+                          controller: _addressController,
+                          decoration:
+                              AppInputDecorations.formField('آدرس کامل'),
+                          maxLines: 3,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'لطفاً آدرس را وارد کنید';
+                            }
+                            return null;
+                          },
+                        ),
+                        AppSizedBox.height16,
 
-                    TextFormField(
-                      controller: _phoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'شماره تماس',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.phone,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'لطفاً شماره تماس را وارد کنید';
-                        }
-                        if (!RegExp(r'^09\d{9}$').hasMatch(value)) {
-                          return 'شماره تماس معتبر نیست';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _phoneController,
+                          decoration:
+                              AppInputDecorations.formField('شماره تماس'),
+                          keyboardType: TextInputType.phone,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'لطفاً شماره تماس را وارد کنید';
+                            }
+                            if (!RegExp(r'^09\d{9}$').hasMatch(value)) {
+                              return 'شماره تماس معتبر نیست';
+                            }
+                            return null;
+                          },
+                        ),
+                        AppSizedBox.height16,
 
-                    TextFormField(
-                      controller: _postalCodeController,
-                      decoration: const InputDecoration(
-                        labelText: 'کد پستی',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'لطفاً کد پستی را وارد کنید';
-                        }
-                        if (!RegExp(r'^\d{10}$').hasMatch(value)) {
-                          return 'کد پستی باید ۱۰ رقم باشد';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
+                        TextFormField(
+                          controller: _postalCodeController,
+                          decoration: AppInputDecorations.formField('کد پستی'),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'لطفاً کد پستی را وارد کنید';
+                            }
+                            if (!RegExp(r'^\d{10}$').hasMatch(value)) {
+                              return 'کد پستی باید ۱۰ رقم باشد';
+                            }
+                            return null;
+                          },
+                        ),
+                        AppSizedBox.height24,
 
-                    ElevatedButton(
-                      onPressed: _submitOrder,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: const Text(
-                        'ثبت سفارش',
-                        style: TextStyle(fontSize: 16),
-                      ),
+                        SizedBox(
+                          height: AppDimensions.buttonHeight,
+                          child: ElevatedButton(
+                            onPressed: _proceedToPayment,
+                            style: AppButtonStyles.primaryButton,
+                            child: Text(
+                              'ادامه و انتخاب روش پرداخت',
+                              style: AppTextStyles.buttonText,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
     );
   }
 }

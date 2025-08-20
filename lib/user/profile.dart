@@ -5,8 +5,10 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../theme.dart';
 import 'user_provider.dart';
 import 'login_page.dart';
+import 'order_history.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -45,7 +47,14 @@ class _ProfilePageState extends State<ProfilePage> {
       SchedulerBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('لطفاً دوباره وارد شوید!')),
+            SnackBar(
+              content: Text(
+                'لطفاً دوباره وارد شوید!',
+                style: AppTextStyles.bodyMedium
+                    .copyWith(color: AppColors.primaryWhite),
+              ),
+              backgroundColor: AppColors.warningOrange,
+            ),
           );
           Navigator.pop(context);
         }
@@ -87,9 +96,13 @@ class _ProfilePageState extends State<ProfilePage> {
 
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('نام نمی‌تواند خالی باشد'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: Text(
+            'نام نمی‌تواند خالی باشد',
+            style: AppTextStyles.bodyMedium
+                .copyWith(color: AppColors.primaryWhite),
+          ),
+          backgroundColor: AppColors.errorRed,
         ),
       );
       return;
@@ -98,9 +111,13 @@ class _ProfilePageState extends State<ProfilePage> {
     if (_phoneController.text.trim().isEmpty ||
         _phoneController.text.length != 11) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('شماره تماس باید ۱۱ رقم باشد'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: Text(
+            'شماره تماس باید ۱۱ رقم باشد',
+            style: AppTextStyles.bodyMedium
+                .copyWith(color: AppColors.primaryWhite),
+          ),
+          backgroundColor: AppColors.errorRed,
         ),
       );
       return;
@@ -110,9 +127,13 @@ class _ProfilePageState extends State<ProfilePage> {
     if (_postalCodeController.text.trim().isNotEmpty &&
         _postalCodeController.text.trim().length != 10) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('کد پستی باید دقیقاً ۱۰ رقم باشد'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: Text(
+            'کد پستی باید دقیقاً ۱۰ رقم باشد',
+            style: AppTextStyles.bodyMedium
+                .copyWith(color: AppColors.primaryWhite),
+          ),
+          backgroundColor: AppColors.errorRed,
         ),
       );
       return;
@@ -135,9 +156,13 @@ class _ProfilePageState extends State<ProfilePage> {
         if (existingUser != null) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('این شماره تماس قبلاً ثبت شده است'),
-                backgroundColor: Colors.red,
+              SnackBar(
+                content: Text(
+                  'این شماره تماس قبلاً ثبت شده است',
+                  style: AppTextStyles.bodyMedium
+                      .copyWith(color: AppColors.primaryWhite),
+                ),
+                backgroundColor: AppColors.errorRed,
               ),
             );
           }
@@ -181,9 +206,13 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('اطلاعات با موفقیت ذخیره شد'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: Text(
+              'اطلاعات با موفقیت ذخیره شد',
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.primaryWhite),
+            ),
+            backgroundColor: AppColors.successGreen,
           ),
         );
       }
@@ -191,8 +220,12 @@ class _ProfilePageState extends State<ProfilePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا در ذخیره اطلاعات: $e'),
-            backgroundColor: Colors.red,
+            content: Text(
+              'خطا در ذخیره اطلاعات: $e',
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.primaryWhite),
+            ),
+            backgroundColor: AppColors.errorRed,
           ),
         );
       }
@@ -208,33 +241,46 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('خروج از حساب کاربری'),
-          content: const Text('آیا می‌خواهید از حساب کاربری خارج شوید؟'),
+          title: Text(
+            'خروج از حساب کاربری',
+            style: AppTextStyles.heading3,
+          ),
+          content: Text(
+            'آیا می‌خواهید از حساب کاربری خارج شوید؟',
+            style: AppTextStyles.bodyMedium,
+          ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop(); // بستن دیالوگ
               },
-              child: const Text('انصراف'),
+              style: AppButtonStyles.transparentButton,
+              child: Text(
+                'انصراف',
+                style: AppTextStyles.linkText,
+              ),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.of(context).pop(); // بستن دیالوگ
 
                 // خروج از UserProvider
-                Provider.of<UserProvider>(context, listen: false).logout();
+                await Provider.of<UserProvider>(context, listen: false)
+                    .logout();
 
                 // برگشت به صفحه ورود
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const HomePage()),
-                  (route) => false,
-                );
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const HomePage()),
+                    (route) => false,
+                  );
+                }
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
+              style: AppButtonStyles.dangerButton,
+              child: Text(
+                'خروج',
+                style: AppTextStyles.buttonText,
               ),
-              child: const Text('خروج'),
             ),
           ],
         );
@@ -263,9 +309,9 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             Text(
               label,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: AppTextStyles.formLabel,
             ),
-            const SizedBox(width: 8),
+            AppSizedBox.width8,
             GestureDetector(
               onTap: onEditPressed,
               child: Icon(
@@ -274,21 +320,24 @@ class _ProfilePageState extends State<ProfilePage> {
                     : (isEditable ? Icons.check : Icons.add),
                 size: 20,
                 color: isEditable
-                    ? Colors.green
-                    : (hasValue ? Colors.blue : Colors.orange),
+                    ? AppColors.profileEditableIcon
+                    : (hasValue
+                        ? AppColors.profileFilledIcon
+                        : AppColors.profileEmptyIcon),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        AppSizedBox.height8,
         TextField(
           controller: controller,
           readOnly: !isEditable,
-          decoration: InputDecoration(
-            hintText: isEditable || !hasValue ? hintText : null,
-            border: const OutlineInputBorder(),
+          decoration: AppInputDecorations.formField(
+            isEditable || !hasValue ? hintText ?? label : '',
+            hint: isEditable || !hasValue ? hintText : null,
+          ).copyWith(
             prefixIcon: Icon(prefixIcon),
-            fillColor: isEditable ? null : Colors.grey[100],
+            fillColor: isEditable ? null : AppColors.formFieldDisabled,
             filled: !isEditable,
           ),
           keyboardType: keyboardType,
@@ -313,20 +362,33 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('پروفایل کاربر'),
+        backgroundColor: AppColors.appBarBackground,
+        title: Text(
+          'پروفایل کاربر',
+          style: AppTextStyles.heading2,
+        ),
         centerTitle: true,
+        elevation: 0.0,
         actions: [
           IconButton(
             onPressed: _logout,
-            icon: const Icon(Icons.logout),
+            icon: Icon(
+              Icons.logout,
+              color: AppColors.profileLogoutButton,
+            ),
             tooltip: 'خروج از حساب کاربری',
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+              child: CircularProgressIndicator(
+                color: AppColors.primaryBlue,
+                strokeWidth: AppDimensions.loadingStrokeWidth,
+              ),
+            )
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
+              padding: AppPadding.allLarge,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -343,7 +405,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     prefixIcon: Icons.person_outline,
                     hintText: 'نام و نام خانوادگی خود را وارد کنید',
                   ),
-                  const SizedBox(height: 16),
+                  AppSizedBox.height16,
 
                   // شماره تماس
                   _buildEditableField(
@@ -363,7 +425,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       FilteringTextInputFormatter.digitsOnly,
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  AppSizedBox.height16,
 
                   // کد پستی
                   _buildEditableField(
@@ -383,7 +445,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       FilteringTextInputFormatter.digitsOnly,
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  AppSizedBox.height16,
 
                   // آدرس
                   _buildEditableField(
@@ -399,7 +461,30 @@ class _ProfilePageState extends State<ProfilePage> {
                     maxLines: 3,
                     hintText: 'آدرس کامل خود را وارد کنید',
                   ),
-                  const SizedBox(height: 32),
+                  AppSizedBox.height32,
+
+                  // دکمه تاریخچه سفارشات
+                  SizedBox(
+                    width: double.infinity,
+                    height: AppDimensions.buttonHeight,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const OrderHistoryPage(),
+                          ),
+                        );
+                      },
+                      style: AppButtonStyles.primaryButton,
+                      icon: const Icon(Icons.history),
+                      label: Text(
+                        'تاریخچه سفارشات',
+                        style: AppTextStyles.buttonText,
+                      ),
+                    ),
+                  ),
+                  AppSizedBox.height16,
 
                   // دکمه ذخیره (فقط اگر حداقل یک فیلد در حالت ویرایش باشه)
                   if (_isNameEditable ||
@@ -408,36 +493,38 @@ class _ProfilePageState extends State<ProfilePage> {
                       _isPostalCodeEditable)
                     SizedBox(
                       width: double.infinity,
+                      height: AppDimensions.buttonHeight,
                       child: ElevatedButton.icon(
                         onPressed: _saveUserInfo,
+                        style: AppButtonStyles.successButton,
                         icon: const Icon(Icons.save),
-                        label: const Text('ذخیره تغییرات'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          textStyle: const TextStyle(fontSize: 16),
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
+                        label: Text(
+                          'ذخیره تغییرات',
+                          style: AppTextStyles.buttonText,
                         ),
                       ),
                     ),
 
                   // فاصله قبل از دکمه خروج
-                  const SizedBox(height: 32),
+                  AppSizedBox.height32,
 
                   // دکمه خروج از حساب کاربری
                   SizedBox(
                     width: double.infinity,
+                    height: AppDimensions.buttonHeight,
                     child: OutlinedButton.icon(
                       onPressed: _logout,
-                      icon: const Icon(Icons.logout, color: Colors.red),
-                      label: const Text(
-                        'خروج از حساب کاربری',
-                        style: TextStyle(color: Colors.red),
-                      ),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        textStyle: const TextStyle(fontSize: 16),
-                        side: const BorderSide(color: Colors.red),
+                        side: BorderSide(color: AppColors.profileLogoutButton),
+                        padding: AppPadding.verticalMedium,
+                      ),
+                      icon: Icon(
+                        Icons.logout,
+                        color: AppColors.profileLogoutButton,
+                      ),
+                      label: Text(
+                        'خروج از حساب کاربری',
+                        style: AppTextStyles.logoutText,
                       ),
                     ),
                   ),
