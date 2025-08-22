@@ -34,7 +34,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'فروشگاه اینترنتی',
+      title: ' فروشگاه اینترنتی آردا',
       scrollBehavior: const AppScrollBehavior(),
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
