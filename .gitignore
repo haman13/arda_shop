@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Additional Flutter ignores
+*.log
+*.iml
+.metadata
+devtools_options.yaml
+database_update_orders.sql
