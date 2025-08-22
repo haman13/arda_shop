@@ -84,11 +84,8 @@
   <script src="flutter.js" defer></script>
   <script>
     window.addEventListener('load', function() {
-      // Initialize Flutter
+      // Initialize Flutter with simple configuration
       _flutter.loader.loadEntrypoint({
-        serviceWorker: {
-          serviceWorkerVersion: serviceWorkerVersion,
-        },
         onEntrypointLoaded: function(engineInitializer) {
           engineInitializer.initializeEngine().then(function(appRunner) {
             // Hide loading screen
