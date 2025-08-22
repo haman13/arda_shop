@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="fa" dir="rtl">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -18,19 +18,33 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Arda Shop - فروشگاه آنلاین کامل با Flutter Web">
+  <meta name="keywords" content="فروشگاه آنلاین, Flutter, Web, خرید آنلاین">
+  <meta name="author" content="Arda Shop Team">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="arda_shop">
+  <meta name="apple-mobile-web-app-title" content="Arda Shop">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>arda_shop</title>
+  <title>Arda Shop - فروشگاه آنلاین</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Preload Flutter -->
+  <script>
+    // Flutter web app loading
+    window.addEventListener('load', function() {
+      // Check if Flutter is loaded
+      if (window.flutter_inappwebview) {
+        console.log('Flutter app loaded successfully');
+      }
+    });
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
