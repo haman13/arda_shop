@@ -84,11 +84,8 @@
   <script src="flutter.js" defer></script>
   <script>
     window.addEventListener('load', function() {
-      // Initialize Flutter
+      // Initialize Flutter without service worker
       _flutter.loader.loadEntrypoint({
-        serviceWorker: {
-          // serviceWorkerVersion: serviceWorkerVersion,
-        },
         onEntrypointLoaded: function(engineInitializer) {
           engineInitializer.initializeEngine().then(function(appRunner) {
             // Hide loading screen
@@ -97,6 +94,10 @@
             
             // Run the app
             appRunner.runApp();
+          }).catch(function(error) {
+            console.error('Flutter engine initialization failed:', error);
+            // Show error message
+            document.getElementById('loading').innerHTML = '<h1>خطا در بارگذاری</h1><p>لطفاً صفحه را refresh کنید</p>';
           });
         }
       });
