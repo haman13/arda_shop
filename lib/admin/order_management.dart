@@ -98,29 +98,44 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
     }).toList();
   }
 
-  int _getRowCount() {
-    return (filteredOrders.length / 2).ceil();
+  int _getRowCount(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 400) {
+      // در اندازه‌های کوچک، هر کارت یک ردیف کامل است
+      return filteredOrders.length;
+    } else {
+      // در اندازه‌های بزرگ، دو کارت در هر ردیف
+      return (filteredOrders.length / 2).ceil();
+    }
   }
 
-  Widget _buildOrderRow(int rowIndex) {
-    final startIndex = rowIndex * 2;
-    final endIndex = (startIndex + 2).clamp(0, filteredOrders.length);
-    final rowOrders = filteredOrders.sublist(startIndex, endIndex);
+  Widget _buildOrderRow(int rowIndex, BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
 
-    return Row(
-      children: [
-        Expanded(
-          child: _buildOrderCard(rowOrders[0]),
-        ),
-        if (rowOrders.length > 1) ...[
-          const SizedBox(width: 12),
+    if (screenWidth < 400) {
+      // در اندازه‌های کوچک، هر کارت یک ردیف کامل است
+      return _buildOrderCard(filteredOrders[rowIndex]);
+    } else {
+      // در اندازه‌های بزرگ، دو کارت در هر ردیف
+      final startIndex = rowIndex * 2;
+      final endIndex = (startIndex + 2).clamp(0, filteredOrders.length);
+      final rowOrders = filteredOrders.sublist(startIndex, endIndex);
+
+      return Row(
+        children: [
           Expanded(
-            child: _buildOrderCard(rowOrders[1]),
+            child: _buildOrderCard(rowOrders[0]),
           ),
-        ] else
-          const Expanded(child: SizedBox()),
-      ],
-    );
+          if (rowOrders.length > 1) ...[
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildOrderCard(rowOrders[1]),
+            ),
+          ] else
+            const Expanded(child: SizedBox()),
+        ],
+      );
+    }
   }
 
   Widget _buildOrderCard(Map<String, dynamic> order) {
@@ -133,32 +148,65 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
     final createdAt = order['created_at'] ?? '';
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'سفارش #${order['id']}',
-                  style: AppTextStyles.heading3,
-                ),
-                _buildStatusChip(status),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 300) {
+                  // در اندازه‌های خیلی کوچک، عنوان و وضعیت را عمودی قرار بده
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'سفارش #${order['id']}',
+                        style: AppTextStyles.heading3.copyWith(
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildStatusChip(status),
+                    ],
+                  );
+                } else {
+                  // در اندازه‌های بزرگتر، عنوان و وضعیت را افقی قرار بده
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'سفارش #${order['id']}',
+                          style: AppTextStyles.heading3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _buildStatusChip(status),
+                    ],
+                  );
+                }
+              },
             ),
             const SizedBox(height: 8),
             Text(
               'مشتری: $userName',
-              style: AppTextStyles.bodyMedium,
+              style: AppTextStyles.bodyMedium.copyWith(
+                fontSize: 13,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
             Text(
               'تلفن: $userPhone',
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.greyText,
+                fontSize: 12,
               ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
             const SizedBox(height: 8),
             Text(
@@ -167,6 +215,8 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                 fontWeight: FontWeight.bold,
                 color: AppColors.primaryBlue,
               ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
             const SizedBox(height: 4),
             Text(
@@ -174,6 +224,8 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
               style: AppTextStyles.bodySmall.copyWith(
                 color: _getPaymentStatusColor(paymentStatus),
               ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
             const SizedBox(height: 4),
             Text(
@@ -181,42 +233,90 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.greyText,
               ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _showOrderDetails(order),
-                    style: AppButtonStyles.primaryButton.copyWith(
-                      backgroundColor:
-                          MaterialStateProperty.all(AppColors.primaryBlue),
-                    ),
-                    child: Text(
-                      'جزئیات',
-                      style: AppTextStyles.buttonText.copyWith(
-                        fontSize: 12,
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 300) {
+                  // در اندازه‌های خیلی کوچک، دکمه‌ها را عمودی قرار بده
+                  return Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => _showOrderDetails(order),
+                          style: AppButtonStyles.primaryButton.copyWith(
+                            backgroundColor: MaterialStateProperty.all(
+                                AppColors.primaryBlue),
+                          ),
+                          child: Text(
+                            'جزئیات',
+                            style: AppTextStyles.buttonText.copyWith(
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _updateOrderStatus(order),
-                    style: AppButtonStyles.primaryButton.copyWith(
-                      backgroundColor:
-                          MaterialStateProperty.all(AppColors.successGreen),
-                    ),
-                    child: Text(
-                      'بروزرسانی',
-                      style: AppTextStyles.buttonText.copyWith(
-                        fontSize: 12,
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => _updateOrderStatus(order),
+                          style: AppButtonStyles.primaryButton.copyWith(
+                            backgroundColor: MaterialStateProperty.all(
+                                AppColors.successGreen),
+                          ),
+                          child: Text(
+                            'بروزرسانی',
+                            style: AppTextStyles.buttonText.copyWith(
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ),
-              ],
+                    ],
+                  );
+                } else {
+                  // در اندازه‌های بزرگتر، دکمه‌ها را افقی قرار بده
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => _showOrderDetails(order),
+                          style: AppButtonStyles.primaryButton.copyWith(
+                            backgroundColor: MaterialStateProperty.all(
+                                AppColors.primaryBlue),
+                          ),
+                          child: Text(
+                            'جزئیات',
+                            style: AppTextStyles.buttonText.copyWith(
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => _updateOrderStatus(order),
+                          style: AppButtonStyles.primaryButton.copyWith(
+                            backgroundColor: MaterialStateProperty.all(
+                                AppColors.successGreen),
+                          ),
+                          child: Text(
+                            'بروزرسانی',
+                            style: AppTextStyles.buttonText.copyWith(
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+              },
             ),
           ],
         ),
@@ -456,17 +556,32 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  flex: 2,
-                                  child: Column(
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                if (constraints.maxWidth < 400) {
+                                  // در اندازه‌های کوچک، header را عمودی قرار بده
+                                  return Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        'مدیریت سفارشات',
-                                        style: AppTextStyles.heading3,
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              'مدیریت سفارشات',
+                                              style: AppTextStyles.heading3,
+                                            ),
+                                          ),
+                                          if (isLoading)
+                                            const SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: AppColors.primaryBlue,
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
@@ -476,67 +591,149 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                                         ),
                                       ),
                                     ],
-                                  ),
-                                ),
-                                if (isLoading)
-                                  const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: AppColors.primaryBlue,
-                                    ),
-                                  ),
-                              ],
+                                  );
+                                } else {
+                                  // در اندازه‌های بزرگ، header را افقی قرار بده
+                                  return Row(
+                                    children: [
+                                      Expanded(
+                                        flex: 2,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'مدیریت سفارشات',
+                                              style: AppTextStyles.heading3,
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'مجموع ${orders.length} سفارش',
+                                              style: AppTextStyles.bodySmall
+                                                  .copyWith(
+                                                color: AppColors.greyText,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (isLoading)
+                                        const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppColors.primaryBlue,
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                }
+                              },
                             ),
                             const SizedBox(height: 16),
                             // فیلترها
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    value: selectedStatusFilter,
-                                    decoration:
-                                        AppInputDecorations.dropdownField(),
-                                    items: orderStatusOptions.map((option) {
-                                      return DropdownMenuItem(
-                                        value: option['value'],
-                                        child: Text(
-                                          option['label']!,
-                                          style: AppTextStyles.bodyMedium,
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                if (constraints.maxWidth < 600) {
+                                  // در اندازه‌های کوچک، فیلترها را عمودی قرار بده
+                                  return Column(
+                                    children: [
+                                      DropdownButtonFormField<String>(
+                                        value: selectedStatusFilter,
+                                        decoration:
+                                            AppInputDecorations.dropdownField(),
+                                        items: orderStatusOptions.map((option) {
+                                          return DropdownMenuItem(
+                                            value: option['value'],
+                                            child: Text(
+                                              option['label']!,
+                                              style: AppTextStyles.bodyMedium,
+                                            ),
+                                          );
+                                        }).toList(),
+                                        onChanged: (value) {
+                                          setState(() {
+                                            selectedStatusFilter = value!;
+                                          });
+                                        },
+                                      ),
+                                      const SizedBox(height: 12),
+                                      DropdownButtonFormField<String>(
+                                        value: selectedPaymentFilter,
+                                        decoration:
+                                            AppInputDecorations.dropdownField(),
+                                        items:
+                                            paymentStatusOptions.map((option) {
+                                          return DropdownMenuItem(
+                                            value: option['value'],
+                                            child: Text(
+                                              option['label']!,
+                                              style: AppTextStyles.bodyMedium,
+                                            ),
+                                          );
+                                        }).toList(),
+                                        onChanged: (value) {
+                                          setState(() {
+                                            selectedPaymentFilter = value!;
+                                          });
+                                        },
+                                      ),
+                                    ],
+                                  );
+                                } else {
+                                  // در اندازه‌های بزرگ، فیلترها را افقی قرار بده
+                                  return Row(
+                                    children: [
+                                      Expanded(
+                                        child: DropdownButtonFormField<String>(
+                                          value: selectedStatusFilter,
+                                          decoration: AppInputDecorations
+                                              .dropdownField(),
+                                          items:
+                                              orderStatusOptions.map((option) {
+                                            return DropdownMenuItem(
+                                              value: option['value'],
+                                              child: Text(
+                                                option['label']!,
+                                                style: AppTextStyles.bodyMedium,
+                                              ),
+                                            );
+                                          }).toList(),
+                                          onChanged: (value) {
+                                            setState(() {
+                                              selectedStatusFilter = value!;
+                                            });
+                                          },
                                         ),
-                                      );
-                                    }).toList(),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        selectedStatusFilter = value!;
-                                      });
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    value: selectedPaymentFilter,
-                                    decoration:
-                                        AppInputDecorations.dropdownField(),
-                                    items: paymentStatusOptions.map((option) {
-                                      return DropdownMenuItem(
-                                        value: option['value'],
-                                        child: Text(
-                                          option['label']!,
-                                          style: AppTextStyles.bodyMedium,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: DropdownButtonFormField<String>(
+                                          value: selectedPaymentFilter,
+                                          decoration: AppInputDecorations
+                                              .dropdownField(),
+                                          items: paymentStatusOptions
+                                              .map((option) {
+                                            return DropdownMenuItem(
+                                              value: option['value'],
+                                              child: Text(
+                                                option['label']!,
+                                                style: AppTextStyles.bodyMedium,
+                                              ),
+                                            );
+                                          }).toList(),
+                                          onChanged: (value) {
+                                            setState(() {
+                                              selectedPaymentFilter = value!;
+                                            });
+                                          },
                                         ),
-                                      );
-                                    }).toList(),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        selectedPaymentFilter = value!;
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ],
+                                      ),
+                                    ],
+                                  );
+                                }
+                              },
                             ),
                           ],
                         ),
@@ -565,12 +762,17 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                               )
                             : RefreshIndicator(
                                 onRefresh: _loadOrders,
-                                child: ListView.builder(
-                                  shrinkWrap: true,
-                                  physics: NeverScrollableScrollPhysics(),
-                                  itemCount: _getRowCount(),
-                                  itemBuilder: (context, rowIndex) {
-                                    return _buildOrderRow(rowIndex);
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    return ListView.builder(
+                                      shrinkWrap: true,
+                                      physics: NeverScrollableScrollPhysics(),
+                                      itemCount: _getRowCount(context),
+                                      itemBuilder: (context, rowIndex) {
+                                        return _buildOrderRow(
+                                            rowIndex, context);
+                                      },
+                                    );
                                   },
                                 ),
                               ),
@@ -596,16 +798,31 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                flex: 2,
-                                child: Column(
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              if (constraints.maxWidth < 400) {
+                                // در اندازه‌های کوچک، header را عمودی قرار بده
+                                return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      'مدیریت سفارشات',
-                                      style: AppTextStyles.heading3,
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            'مدیریت سفارشات',
+                                            style: AppTextStyles.heading3,
+                                          ),
+                                        ),
+                                        if (isLoading)
+                                          const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: AppColors.primaryBlue,
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
@@ -615,67 +832,147 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                                       ),
                                     ),
                                   ],
-                                ),
-                              ),
-                              if (isLoading)
-                                const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.primaryBlue,
-                                  ),
-                                ),
-                            ],
+                                );
+                              } else {
+                                // در اندازه‌های بزرگ، header را افقی قرار بده
+                                return Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 2,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'مدیریت سفارشات',
+                                            style: AppTextStyles.heading3,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'مجموع ${orders.length} سفارش',
+                                            style: AppTextStyles.bodySmall
+                                                .copyWith(
+                                              color: AppColors.greyText,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (isLoading)
+                                      const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppColors.primaryBlue,
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              }
+                            },
                           ),
                           const SizedBox(height: 16),
                           // فیلترها
-                          Row(
-                            children: [
-                              Expanded(
-                                child: DropdownButtonFormField<String>(
-                                  value: selectedStatusFilter,
-                                  decoration:
-                                      AppInputDecorations.dropdownField(),
-                                  items: orderStatusOptions.map((option) {
-                                    return DropdownMenuItem(
-                                      value: option['value'],
-                                      child: Text(
-                                        option['label']!,
-                                        style: AppTextStyles.bodyMedium,
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              if (constraints.maxWidth < 600) {
+                                // در اندازه‌های کوچک، فیلترها را عمودی قرار بده
+                                return Column(
+                                  children: [
+                                    DropdownButtonFormField<String>(
+                                      value: selectedStatusFilter,
+                                      decoration:
+                                          AppInputDecorations.dropdownField(),
+                                      items: orderStatusOptions.map((option) {
+                                        return DropdownMenuItem(
+                                          value: option['value'],
+                                          child: Text(
+                                            option['label']!,
+                                            style: AppTextStyles.bodyMedium,
+                                          ),
+                                        );
+                                      }).toList(),
+                                      onChanged: (value) {
+                                        setState(() {
+                                          selectedStatusFilter = value!;
+                                        });
+                                      },
+                                    ),
+                                    const SizedBox(height: 12),
+                                    DropdownButtonFormField<String>(
+                                      value: selectedPaymentFilter,
+                                      decoration:
+                                          AppInputDecorations.dropdownField(),
+                                      items: paymentStatusOptions.map((option) {
+                                        return DropdownMenuItem(
+                                          value: option['value'],
+                                          child: Text(
+                                            option['label']!,
+                                            style: AppTextStyles.bodyMedium,
+                                          ),
+                                        );
+                                      }).toList(),
+                                      onChanged: (value) {
+                                        setState(() {
+                                          selectedPaymentFilter = value!;
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                );
+                              } else {
+                                // در اندازه‌های بزرگ، فیلترها را افقی قرار بده
+                                return Row(
+                                  children: [
+                                    Expanded(
+                                      child: DropdownButtonFormField<String>(
+                                        value: selectedStatusFilter,
+                                        decoration:
+                                            AppInputDecorations.dropdownField(),
+                                        items: orderStatusOptions.map((option) {
+                                          return DropdownMenuItem(
+                                            value: option['value'],
+                                            child: Text(
+                                              option['label']!,
+                                              style: AppTextStyles.bodyMedium,
+                                            ),
+                                          );
+                                        }).toList(),
+                                        onChanged: (value) {
+                                          setState(() {
+                                            selectedStatusFilter = value!;
+                                          });
+                                        },
                                       ),
-                                    );
-                                  }).toList(),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      selectedStatusFilter = value!;
-                                    });
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: DropdownButtonFormField<String>(
-                                  value: selectedPaymentFilter,
-                                  decoration:
-                                      AppInputDecorations.dropdownField(),
-                                  items: paymentStatusOptions.map((option) {
-                                    return DropdownMenuItem(
-                                      value: option['value'],
-                                      child: Text(
-                                        option['label']!,
-                                        style: AppTextStyles.bodyMedium,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: DropdownButtonFormField<String>(
+                                        value: selectedPaymentFilter,
+                                        decoration:
+                                            AppInputDecorations.dropdownField(),
+                                        items:
+                                            paymentStatusOptions.map((option) {
+                                          return DropdownMenuItem(
+                                            value: option['value'],
+                                            child: Text(
+                                              option['label']!,
+                                              style: AppTextStyles.bodyMedium,
+                                            ),
+                                          );
+                                        }).toList(),
+                                        onChanged: (value) {
+                                          setState(() {
+                                            selectedPaymentFilter = value!;
+                                          });
+                                        },
                                       ),
-                                    );
-                                  }).toList(),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      selectedPaymentFilter = value!;
-                                    });
-                                  },
-                                ),
-                              ),
-                            ],
+                                    ),
+                                  ],
+                                );
+                              }
+                            },
                           ),
                         ],
                       ),
@@ -702,13 +999,17 @@ class _OrderManagementPageState extends State<OrderManagementPage> {
                             )
                           : RefreshIndicator(
                               onRefresh: _loadOrders,
-                              child: ListView.builder(
-                                padding: const EdgeInsets.all(
-                                  AppDimensions.paddingMedium,
-                                ),
-                                itemCount: _getRowCount(),
-                                itemBuilder: (context, rowIndex) {
-                                  return _buildOrderRow(rowIndex);
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  return ListView.builder(
+                                    padding: const EdgeInsets.all(
+                                      AppDimensions.paddingMedium,
+                                    ),
+                                    itemCount: _getRowCount(context),
+                                    itemBuilder: (context, rowIndex) {
+                                      return _buildOrderRow(rowIndex, context);
+                                    },
+                                  );
                                 },
                               ),
                             ),

@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_final_fields
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import '../theme.dart';
@@ -235,6 +236,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           decoration:
                               AppInputDecorations.formField('شماره تماس'),
                           keyboardType: TextInputType.phone,
+                          maxLength: 11,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(11),
+                          ],
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'لطفاً شماره تماس را وارد کنید';

@@ -423,6 +423,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     hintText: 'شماره تماس ۱۱ رقمی',
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(11),
                     ],
                   ),
                   AppSizedBox.height16,

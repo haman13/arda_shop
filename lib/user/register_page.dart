@@ -149,6 +149,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         maxLength: 11,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(11),
                         ],
                         validator: (value) {
                           if (value == null || value.isEmpty) {
