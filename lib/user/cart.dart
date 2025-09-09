@@ -247,152 +247,164 @@ class _CartPageState extends State<CartPage> {
         centerTitle: true,
         elevation: 0.0,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              padding: AppPadding.allSmall,
-              itemCount: _cartItems.length,
-              itemBuilder: (context, index) {
-                final item = _cartItems[index];
-                final product = item['products'] as Map<String, dynamic>;
+      body: OrientationBuilder(
+        builder: (context, orientation) {
+          final list = ListView.builder(
+            padding: AppPadding.allSmall,
+            shrinkWrap: orientation == Orientation.landscape,
+            physics: orientation == Orientation.landscape
+                ? const NeverScrollableScrollPhysics()
+                : null,
+            itemCount: _cartItems.length,
+            itemBuilder: (context, index) {
+              final item = _cartItems[index];
+              final product = item['products'] as Map<String, dynamic>;
 
-                return Container(
-                  margin: AppPadding.verticalSmall,
-                  decoration: AppDecorations.cartItemShadow,
-                  child: Card(
-                    elevation: 0,
-                    child: Padding(
-                      padding: AppPadding.allMedium,
-                      child: Row(
-                        children: [
-                          // تصویر محصول
-                          ClipRRect(
-                            borderRadius: AppBorderRadius.small,
-                            child: product['image_url'] != null
-                                ? Image.network(
-                                    product['image_url'],
-                                    width:
-                                        AppDimensions.productImageWidth * 1.6,
-                                    height: AppDimensions.productImageHeight,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Container(
-                                    width:
-                                        AppDimensions.productImageWidth * 1.6,
-                                    height: AppDimensions.productImageHeight,
-                                    color: AppColors.productImagePlaceholder,
-                                    child: Icon(
-                                      Icons.image,
-                                      size: AppDimensions.iconSize * 1.5,
-                                      color: AppColors.greyText,
-                                    ),
+              return Container(
+                margin: AppPadding.verticalSmall,
+                decoration: AppDecorations.cartItemShadow,
+                child: Card(
+                  elevation: 0,
+                  child: Padding(
+                    padding: AppPadding.allMedium,
+                    child: Row(
+                      children: [
+                        // تصویر محصول
+                        ClipRRect(
+                          borderRadius: AppBorderRadius.small,
+                          child: product['image_url'] != null
+                              ? Image.network(
+                                  product['image_url'],
+                                  width: AppDimensions.productImageWidth * 1.6,
+                                  height: AppDimensions.productImageHeight,
+                                  fit: BoxFit.cover,
+                                )
+                              : Container(
+                                  width: AppDimensions.productImageWidth * 1.6,
+                                  height: AppDimensions.productImageHeight,
+                                  color: AppColors.productImagePlaceholder,
+                                  child: Icon(
+                                    Icons.image,
+                                    size: AppDimensions.iconSize * 1.5,
+                                    color: AppColors.greyText,
                                   ),
-                          ),
-                          AppSizedBox.width16,
-                          // اطلاعات محصول
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  product['name'],
-                                  style: AppTextStyles.productTitle,
                                 ),
-                                AppSizedBox.height4,
-                                Text(
-                                  AppUtilities.formatPrice(
-                                      product['final_price']),
-                                  style: AppTextStyles.productPrice,
-                                ),
-                              ],
-                            ),
-                          ),
-                          // کنترل‌های تعداد
-                          Row(
+                        ),
+                        AppSizedBox.width16,
+                        // اطلاعات محصول
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              IconButton(
-                                icon: const Icon(Icons.remove),
-                                onPressed: () => _updateQuantity(
-                                  item['id'],
-                                  (item['quantity'] as int) - 1,
-                                ),
-                              ),
                               Text(
-                                '${item['quantity']}',
-                                style: AppTextStyles.bodyMedium,
+                                product['name'],
+                                style: AppTextStyles.productTitle,
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.add),
-                                onPressed: () => _updateQuantity(
-                                  item['id'],
-                                  (item['quantity'] as int) + 1,
-                                ),
+                              AppSizedBox.height4,
+                              Text(
+                                AppUtilities.formatPrice(
+                                    product['final_price']),
+                                style: AppTextStyles.productPrice,
                               ),
                             ],
                           ),
-                          // دکمه حذف
-                          IconButton(
-                            icon: Icon(
-                              Icons.delete,
-                              color: AppColors.cartDeleteButton,
+                        ),
+                        // کنترل‌های تعداد
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove),
+                              onPressed: () => _updateQuantity(
+                                item['id'],
+                                (item['quantity'] as int) - 1,
+                              ),
                             ),
-                            onPressed: () => _removeItem(item['id']),
+                            Text(
+                              '${item['quantity']}',
+                              style: AppTextStyles.bodyMedium,
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.add),
+                              onPressed: () => _updateQuantity(
+                                item['id'],
+                                (item['quantity'] as int) + 1,
+                              ),
+                            ),
+                          ],
+                        ),
+                        // دکمه حذف
+                        IconButton(
+                          icon: Icon(
+                            Icons.delete,
+                            color: AppColors.cartDeleteButton,
                           ),
-                        ],
-                      ),
+                          onPressed: () => _removeItem(item['id']),
+                        ),
+                      ],
                     ),
                   ),
-                );
-              },
-            ),
-          ),
-          // بخش جمع کل و دکمه نهایی کردن خرید
-          Container(
-            padding: AppPadding.allMedium,
-            decoration: BoxDecoration(
-              color: AppColors.primaryWhite,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.cartShadow,
-                  blurRadius: 4,
-                  offset: const Offset(0, -2),
                 ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'جمع کل:',
-                      style: AppTextStyles.heading3,
-                    ),
-                    Text(
-                      AppUtilities.formatPrice(_totalAmount.toStringAsFixed(0)),
-                      style: AppTextStyles.heading3
-                          .copyWith(color: AppColors.cartTotalPrice),
+              );
+            },
+          );
+
+          final content = Column(
+            children: [
+              list,
+              // بخش جمع کل و دکمه نهایی کردن خرید
+              Container(
+                padding: AppPadding.allMedium,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryWhite,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.cartShadow,
+                      blurRadius: 4,
+                      offset: const Offset(0, -2),
                     ),
                   ],
                 ),
-                AppSizedBox.height16,
-                SizedBox(
-                  width: double.infinity,
-                  height: AppDimensions.buttonHeight,
-                  child: ElevatedButton(
-                    onPressed: _showCheckoutDialog,
-                    style: AppButtonStyles.successButton,
-                    child: Text(
-                      'نهایی کردن خرید',
-                      style: AppTextStyles.buttonText,
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'جمع کل:',
+                          style: AppTextStyles.heading3,
+                        ),
+                        Text(
+                          AppUtilities.formatPrice(
+                              _totalAmount.toStringAsFixed(0)),
+                          style: AppTextStyles.heading3
+                              .copyWith(color: AppColors.cartTotalPrice),
+                        ),
+                      ],
                     ),
-                  ),
+                    AppSizedBox.height16,
+                    SizedBox(
+                      width: double.infinity,
+                      height: AppDimensions.buttonHeight,
+                      child: ElevatedButton(
+                        onPressed: _showCheckoutDialog,
+                        style: AppButtonStyles.successButton,
+                        child: Text(
+                          'نهایی کردن خرید',
+                          style: AppTextStyles.buttonText,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+
+          if (orientation == Orientation.landscape) {
+            return SingleChildScrollView(child: content);
+          }
+          return content;
+        },
       ),
     );
   }

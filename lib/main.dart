@@ -34,7 +34,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: ' فروشگاه اینترنتی آردا',
+      title: 'فروشگاه اینترنتی آردا',
       scrollBehavior: const AppScrollBehavior(),
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -73,7 +73,8 @@ class AppScrollBehavior extends MaterialScrollBehavior {
       };
 }
 
-// AuthWrapper برای تشخیص نوع کاربر بعد از refresh
+// AuthWrapper برای تش
+//خیص نوع کاربر بعد از refresh
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 

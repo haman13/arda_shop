@@ -1,3 +1,5 @@
+// ignore_for_file: sized_box_for_whitespace
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme.dart';
@@ -216,21 +218,81 @@ class _UserManagementPageState extends State<UserManagementPage> {
     );
   }
 
-  // تعیین تعداد ستون‌ها بر اساس عرض صفحه
+  // تعیین تعداد ستون‌ها بر اساس عرض صفحه و جهت صفحه
   int _getGridCrossAxisCount(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth > 1200) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final orientation = MediaQuery.of(context).orientation;
+
+    // تشخیص نوع دستگاه بر اساس ابعاد
+    bool isTablet = screenWidth >= 600 || screenHeight >= 600;
+    bool isDesktop = screenWidth >= 1200;
+
+    if (isDesktop) {
       return 3; // دسکتاپ: 3 ستون
-    } else if (screenWidth > 800) {
-      return 2; // تبلت: 2 ستون
+    } else if (isTablet) {
+      // تبلت: بر اساس جهت صفحه
+      if (orientation == Orientation.landscape) {
+        // حالت افقی: ستون‌های بیشتر
+        return screenWidth >= 1000 ? 4 : 3;
+      } else {
+        // حالت عمودی: ستون‌های کمتر
+        return 2;
+      }
     } else {
-      return 1; // موبایل: 1 ستون
+      // موبایل: بر اساس جهت صفحه
+      if (orientation == Orientation.landscape) {
+        // حالت افقی: 2 ستون
+        return 2;
+      } else {
+        // حالت عمودی: 1 ستون
+        return 1;
+      }
     }
   }
 
-  String _formatDate(String dateString) {
-    final date = DateTime.parse(dateString);
-    return '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
+  // نسبت عرض به ارتفاع کارت‌ها بر اساس ابعاد صفحه، جهت صفحه و مقیاس متن
+  double _getChildAspectRatio(BuildContext context, int crossAxisCount) {
+    final size = MediaQuery.of(context).size;
+    final textScale = MediaQuery.of(context).textScaleFactor;
+    final orientation = MediaQuery.of(context).orientation;
+
+    // تنظیم نسبت بر اساس تعداد ستون‌ها، جهت صفحه و عرض صفحه
+    double baseRatio;
+
+    if (crossAxisCount >= 4) {
+      // دسکتاپ یا تبلت افقی با 4 ستون
+      baseRatio = orientation == Orientation.landscape ? 1.3 : 1.5;
+    } else if (crossAxisCount == 3) {
+      // دسکتاپ یا تبلت افقی با 3 ستون
+      if (orientation == Orientation.landscape) {
+        baseRatio = size.width >= 1000 ? 1.2 : 1.4;
+      } else {
+        baseRatio = 1.6;
+      }
+    } else if (crossAxisCount == 2) {
+      // تبلت عمودی یا موبایل افقی با 2 ستون
+      if (orientation == Orientation.landscape) {
+        // حالت افقی: کارت‌ها پهن‌تر
+        baseRatio = size.width >= 800 ? 1.3 : 1.5;
+      } else {
+        // حالت عمودی: کارت‌ها بلندتر
+        baseRatio = size.width >= 700 ? 1.4 : 1.6;
+      }
+    } else {
+      // موبایل عمودی با 1 ستون
+      baseRatio = size.width <= 400 ? 1.2 : 1.3;
+    }
+
+    // اعمال مقیاس فونت سیستم
+    double adjustedRatio = baseRatio / textScale;
+
+    // محدود کردن نسبت‌ها بر اساس orientation
+    if (orientation == Orientation.landscape) {
+      return adjustedRatio.clamp(1.0, 1.8);
+    } else {
+      return adjustedRatio.clamp(1.0, 1.6);
+    }
   }
 
   Widget _buildStatisticsRow() {
@@ -315,6 +377,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
           padding: AppPadding.allMedium,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min, // کاهش ارتفاع کارت
             children: [
               // Header with name and status
               Row(
@@ -329,7 +392,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                   ),
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                     decoration: BoxDecoration(
                       color: isBlocked
                           ? AppColors.errorRed
@@ -348,43 +411,52 @@ class _UserManagementPageState extends State<UserManagementPage> {
                         color: (isBlocked || isActive)
                             ? AppColors.primaryWhite
                             : AppColors.greyText,
+                        fontSize: 10,
                       ),
                     ),
                   ),
                 ],
               ),
-              AppSizedBox.height8,
+              SizedBox(height: 6),
 
               // Phone number
               Row(
                 children: [
-                  Icon(Icons.phone, size: 16, color: AppColors.greyText),
-                  AppSizedBox.width8,
-                  Text(
-                    user['phone'] ?? '',
-                    style: AppTextStyles.bodyMedium,
+                  Icon(Icons.phone, size: 14, color: AppColors.greyText),
+                  SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      user['phone'] ?? '',
+                      style: AppTextStyles.bodyMedium.copyWith(fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),
-              AppSizedBox.height4,
+              SizedBox(height: 4),
 
               // Registration date
               Row(
                 children: [
                   Icon(Icons.calendar_today,
-                      size: 16, color: AppColors.greyText),
-                  AppSizedBox.width8,
-                  Text(
-                    'عضویت: ${_formatDate(user['created_at'])}',
-                    style: AppTextStyles.bodySmall,
+                      size: 14, color: AppColors.greyText),
+                  SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'عضویت: ${AppUtilities.formatJalali(user['created_at'])}',
+                      style: AppTextStyles.bodySmall.copyWith(fontSize: 10),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),
-              AppSizedBox.height8,
+              SizedBox(height: 8),
 
               // Order statistics
               Container(
-                padding: AppPadding.allSmall,
+                padding: EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: AppColors.backgroundLight,
                   borderRadius: AppBorderRadius.small,
@@ -399,11 +471,12 @@ class _UserManagementPageState extends State<UserManagementPage> {
                           style: AppTextStyles.bodyMedium.copyWith(
                             fontWeight: FontWeight.bold,
                             color: AppColors.primaryBlue,
+                            fontSize: 12,
                           ),
                         ),
                         Text(
                           'سفارش',
-                          style: AppTextStyles.bodySmall,
+                          style: AppTextStyles.bodySmall.copyWith(fontSize: 10),
                         ),
                       ],
                     ),
@@ -414,11 +487,14 @@ class _UserManagementPageState extends State<UserManagementPage> {
                           style: AppTextStyles.bodySmall.copyWith(
                             fontWeight: FontWeight.bold,
                             color: AppColors.successGreen,
+                            fontSize: 10,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           'کل خرید',
-                          style: AppTextStyles.bodySmall,
+                          style: AppTextStyles.bodySmall.copyWith(fontSize: 10),
                         ),
                       ],
                     ),
@@ -434,120 +510,331 @@ class _UserManagementPageState extends State<UserManagementPage> {
 
   @override
   Widget build(BuildContext context) {
-    final crossAxisCount = _getGridCrossAxisCount(context);
+    return OrientationBuilder(
+      builder: (context, orientation) {
+        final crossAxisCount = _getGridCrossAxisCount(context);
+        final screenWidth = MediaQuery.of(context).size.width;
+        final screenHeight = MediaQuery.of(context).size.height;
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarBackground,
-        title: Text(
-          'مدیریت کاربران',
-          style: AppTextStyles.heading2,
-        ),
-        centerTitle: true,
-        elevation: 0.0,
-      ),
-      body: isLoading
-          ? Center(
-              child: CircularProgressIndicator(
-                color: AppColors.primaryBlue,
-                strokeWidth: AppDimensions.loadingStrokeWidth,
-              ),
-            )
-          : Padding(
-              padding: AppPadding.allMedium,
-              child: Column(
-                children: [
-                  // Statistics row
-                  _buildStatisticsRow(),
+        // تنظیم padding بر اساس orientation
+        final padding = orientation == Orientation.landscape
+            ? (screenWidth > 800 ? 16.0 : 12.0)
+            : 16.0;
 
-                  // Search and filter
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: TextField(
-                          controller: _searchController,
-                          decoration: AppInputDecorations.searchField(
-                              'جستجو بر اساس نام یا شماره موبایل'),
-                        ),
-                      ),
-                      AppSizedBox.width12,
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: selectedDateFilter,
-                          decoration: AppInputDecorations.dropdownField(),
-                          items: dateFilterOptions.map((option) {
-                            return DropdownMenuItem(
-                              value: option['value'],
+        return Scaffold(
+          appBar: AppBar(
+            backgroundColor: AppColors.appBarBackground,
+            title: Text(
+              'مدیریت کاربران',
+              style: AppTextStyles.heading2,
+            ),
+            centerTitle: true,
+            elevation: 0.0,
+          ),
+          body: isLoading
+              ? Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.primaryBlue,
+                    strokeWidth: AppDimensions.loadingStrokeWidth,
+                  ),
+                )
+              : orientation == Orientation.landscape
+                  ? SingleChildScrollView(
+                      child: Padding(
+                        padding: EdgeInsets.all(padding),
+                        child: Column(
+                          children: [
+                            // Statistics row
+                            _buildStatisticsRow(),
+
+                            // Search and filter
+                            LayoutBuilder(builder: (context, constraints) {
+                              final isNarrow = constraints.maxWidth < 420;
+                              final isLandscape =
+                                  orientation == Orientation.landscape;
+
+                              if (isNarrow ||
+                                  (isLandscape && screenWidth < 600)) {
+                                return Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    TextField(
+                                      controller: _searchController,
+                                      decoration: AppInputDecorations.searchField(
+                                          'جستجو بر اساس نام یا شماره موبایل'),
+                                    ),
+                                    AppSizedBox.height12,
+                                    DropdownButtonFormField<String>(
+                                      value: selectedDateFilter,
+                                      isExpanded: true,
+                                      decoration:
+                                          AppInputDecorations.dropdownField(),
+                                      items: dateFilterOptions.map((option) {
+                                        return DropdownMenuItem(
+                                          value: option['value'],
+                                          child: Text(
+                                            option['label']!,
+                                            style: AppTextStyles.bodyMedium,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        );
+                                      }).toList(),
+                                      onChanged: (value) {
+                                        setState(() {
+                                          selectedDateFilter = value!;
+                                        });
+                                        _filterUsers();
+                                      },
+                                    ),
+                                  ],
+                                );
+                              }
+                              return Row(
+                                children: [
+                                  Expanded(
+                                    flex: isLandscape ? 3 : 2,
+                                    child: TextField(
+                                      controller: _searchController,
+                                      decoration: AppInputDecorations.searchField(
+                                          'جستجو بر اساس نام یا شماره موبایل'),
+                                    ),
+                                  ),
+                                  AppSizedBox.width12,
+                                  Expanded(
+                                    child: DropdownButtonFormField<String>(
+                                      value: selectedDateFilter,
+                                      isExpanded: true,
+                                      decoration:
+                                          AppInputDecorations.dropdownField(),
+                                      items: dateFilterOptions.map((option) {
+                                        return DropdownMenuItem(
+                                          value: option['value'],
+                                          child: Text(
+                                            option['label']!,
+                                            style: AppTextStyles.bodyMedium,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        );
+                                      }).toList(),
+                                      onChanged: (value) {
+                                        setState(() {
+                                          selectedDateFilter = value!;
+                                        });
+                                        _filterUsers();
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }),
+                            AppSizedBox.height16,
+
+                            // Results count
+                            Align(
+                              alignment: Alignment.centerRight,
                               child: Text(
-                                option['label']!,
+                                '${filteredUsers.length} کاربر یافت شد',
                                 style: AppTextStyles.bodyMedium,
                               ),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              selectedDateFilter = value!;
-                            });
-                            _filterUsers();
-                          },
+                            ),
+                            AppSizedBox.height12,
+
+                            // Users grid
+                            filteredUsers.isEmpty
+                                ? Container(
+                                    height: screenHeight * 0.6,
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.people_outline,
+                                            size: orientation ==
+                                                    Orientation.landscape
+                                                ? 48
+                                                : 64,
+                                            color: AppColors.greyLight,
+                                          ),
+                                          AppSizedBox.height16,
+                                          Text(
+                                            'کاربری یافت نشد',
+                                            style: AppTextStyles.bodyLarge,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                : GridView.builder(
+                                    shrinkWrap: true,
+                                    physics: NeverScrollableScrollPhysics(),
+                                    gridDelegate:
+                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: crossAxisCount,
+                                      childAspectRatio: _getChildAspectRatio(
+                                          context, crossAxisCount),
+                                      crossAxisSpacing:
+                                          AppDimensions.paddingSmall,
+                                      mainAxisSpacing:
+                                          AppDimensions.paddingSmall,
+                                    ),
+                                    itemCount: filteredUsers.length,
+                                    itemBuilder: (context, index) {
+                                      return _buildUserCard(
+                                          filteredUsers[index]);
+                                    },
+                                  ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                  AppSizedBox.height16,
+                    )
+                  : Padding(
+                      padding: EdgeInsets.all(padding),
+                      child: Column(
+                        children: [
+                          // Statistics row
+                          _buildStatisticsRow(),
 
-                  // Results count
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      '${filteredUsers.length} کاربر یافت شد',
-                      style: AppTextStyles.bodyMedium,
-                    ),
-                  ),
-                  AppSizedBox.height12,
+                          // Search and filter
+                          LayoutBuilder(builder: (context, constraints) {
+                            final isNarrow = constraints.maxWidth < 420;
+                            final isLandscape =
+                                orientation == Orientation.landscape;
 
-                  // Users grid
-                  Expanded(
-                    child: filteredUsers.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                            if (isNarrow ||
+                                (isLandscape && screenWidth < 600)) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  TextField(
+                                    controller: _searchController,
+                                    decoration: AppInputDecorations.searchField(
+                                        'جستجو بر اساس نام یا شماره موبایل'),
+                                  ),
+                                  AppSizedBox.height12,
+                                  DropdownButtonFormField<String>(
+                                    value: selectedDateFilter,
+                                    isExpanded: true,
+                                    decoration:
+                                        AppInputDecorations.dropdownField(),
+                                    items: dateFilterOptions.map((option) {
+                                      return DropdownMenuItem(
+                                        value: option['value'],
+                                        child: Text(
+                                          option['label']!,
+                                          style: AppTextStyles.bodyMedium,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        selectedDateFilter = value!;
+                                      });
+                                      _filterUsers();
+                                    },
+                                  ),
+                                ],
+                              );
+                            }
+                            return Row(
                               children: [
-                                Icon(
-                                  Icons.people_outline,
-                                  size: 64,
-                                  color: AppColors.greyLight,
+                                Expanded(
+                                  flex: isLandscape ? 3 : 2,
+                                  child: TextField(
+                                    controller: _searchController,
+                                    decoration: AppInputDecorations.searchField(
+                                        'جستجو بر اساس نام یا شماره موبایل'),
+                                  ),
                                 ),
-                                AppSizedBox.height16,
-                                Text(
-                                  'کاربری یافت نشد',
-                                  style: AppTextStyles.bodyLarge,
+                                AppSizedBox.width12,
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    value: selectedDateFilter,
+                                    isExpanded: true,
+                                    decoration:
+                                        AppInputDecorations.dropdownField(),
+                                    items: dateFilterOptions.map((option) {
+                                      return DropdownMenuItem(
+                                        value: option['value'],
+                                        child: Text(
+                                          option['label']!,
+                                          style: AppTextStyles.bodyMedium,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        selectedDateFilter = value!;
+                                      });
+                                      _filterUsers();
+                                    },
+                                  ),
                                 ),
                               ],
+                            );
+                          }),
+                          AppSizedBox.height16,
+
+                          // Results count
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              '${filteredUsers.length} کاربر یافت شد',
+                              style: AppTextStyles.bodyMedium,
                             ),
-                          )
-                        : GridView.builder(
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: crossAxisCount,
-                              childAspectRatio: crossAxisCount == 1
-                                  ? 2.5 // موبایل: نسبت عرض به ارتفاع 2.5:1
-                                  : crossAxisCount == 2
-                                      ? 1.8 // تبلت: نسبت عرض به ارتفاع 1.8:1
-                                      : 1.5, // دسکتاپ: نسبت عرض به ارتفاع 1.5:1
-                              crossAxisSpacing: AppDimensions.paddingSmall,
-                              mainAxisSpacing: AppDimensions.paddingSmall,
-                            ),
-                            itemCount: filteredUsers.length,
-                            itemBuilder: (context, index) {
-                              return _buildUserCard(filteredUsers[index]);
-                            },
                           ),
-                  ),
-                ],
-              ),
-            ),
+                          AppSizedBox.height12,
+
+                          // Users grid
+                          Expanded(
+                            child: filteredUsers.isEmpty
+                                ? Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.people_outline,
+                                          size: orientation ==
+                                                  Orientation.landscape
+                                              ? 48
+                                              : 64,
+                                          color: AppColors.greyLight,
+                                        ),
+                                        AppSizedBox.height16,
+                                        Text(
+                                          'کاربری یافت نشد',
+                                          style: AppTextStyles.bodyLarge,
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : GridView.builder(
+                                    gridDelegate:
+                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: crossAxisCount,
+                                      childAspectRatio: _getChildAspectRatio(
+                                          context, crossAxisCount),
+                                      crossAxisSpacing:
+                                          AppDimensions.paddingSmall,
+                                      mainAxisSpacing:
+                                          AppDimensions.paddingSmall,
+                                    ),
+                                    itemCount: filteredUsers.length,
+                                    itemBuilder: (context, index) {
+                                      return _buildUserCard(
+                                          filteredUsers[index]);
+                                    },
+                                  ),
+                          ),
+                        ],
+                      ),
+                    ),
+        );
+      },
     );
   }
 }
@@ -596,11 +883,6 @@ class _UserDetailsModalState extends State<_UserDetailsModal> {
         isLoadingOrders = false;
       });
     }
-  }
-
-  String _formatDate(String dateString) {
-    final date = DateTime.parse(dateString);
-    return '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
   }
 
   String _getStatusText(String status) {
@@ -821,10 +1103,14 @@ class _UserDetailsModalState extends State<_UserDetailsModal> {
                         _buildInfoRow('نام', widget.user['name'] ?? 'نامشخص'),
                         _buildInfoRow(
                             'شماره موبایل', widget.user['phone'] ?? ''),
-                        _buildInfoRow('تاریخ عضویت',
-                            _formatDate(widget.user['created_at'])),
-                        _buildInfoRow('آخرین بروزرسانی',
-                            _formatDate(widget.user['updated_at'])),
+                        _buildInfoRow(
+                            'تاریخ عضویت',
+                            AppUtilities.formatJalali(
+                                widget.user['created_at'])),
+                        _buildInfoRow(
+                            'آخرین بروزرسانی',
+                            AppUtilities.formatJalali(
+                                widget.user['updated_at'])),
                         _buildInfoRow(
                             'آدرس', widget.user['address'] ?? 'وارد نشده'),
                         _buildInfoRow('کد پستی',
@@ -865,7 +1151,8 @@ class _UserDetailsModalState extends State<_UserDetailsModal> {
                           _buildInfoRow(
                               'تاریخ مسدود سازی',
                               widget.user['blocked_at'] != null
-                                  ? _formatDate(widget.user['blocked_at'])
+                                  ? AppUtilities.formatJalali(
+                                      widget.user['blocked_at'])
                                   : 'نامشخص'),
                           _buildInfoRow('مسدود شده توسط',
                               widget.user['blocked_by'] ?? 'نامشخص'),
@@ -950,7 +1237,7 @@ class _UserDetailsModalState extends State<_UserDetailsModal> {
                                         style: AppTextStyles.bodyMedium,
                                       ),
                                       subtitle: Text(
-                                        '${_formatDate(order['created_at'])} - ${_getStatusText(order['status'])}',
+                                        '${AppUtilities.formatJalali(order['created_at'])} - ${_getStatusText(order['status'])}',
                                         style: AppTextStyles.bodySmall,
                                       ),
                                       trailing: Container(

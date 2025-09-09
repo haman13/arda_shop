@@ -896,7 +896,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   child: Text(
                     MediaQuery.of(context).size.width < 400
                         ? 'آردا شاپ'
-                        : 'فروشگاه اینترنتی',
+                        : ' فروشگاه اینترنتی آردا',
                     style: AppTextStyles.heading2.copyWith(
                       color: AppColors.primaryBlack,
                       fontSize:
@@ -936,266 +936,290 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         backgroundColor: AppColors.appBarBackground,
         elevation: 0.0,
       ),
-      body: Column(
-        children: [
-          // نوار جستجوی مدرن
-          Container(
-            padding: EdgeInsets.all(
-              MediaQuery.of(context).size.width < 350
-                  ? 4
-                  : MediaQuery.of(context).size.width < 400
-                      ? 6
-                      : AppDimensions.paddingMedium,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: AppDecorations.modernSearchField,
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: AppInputDecorations.modernSearchField(),
-                      onChanged: (value) => _filterProducts(),
-                    ),
-                  ),
-                ),
-                SizedBox(
-                    width: MediaQuery.of(context).size.width < 400 ? 6 : 12),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: AppGradients.blueGradient,
-                    borderRadius: BorderRadius.circular(
-                      MediaQuery.of(context).size.width < 400 ? 8 : 12,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.cardShadowLight,
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: IconButton(
-                    onPressed: _showFilterDialog,
-                    icon: Icon(
-                      Icons.tune_rounded,
-                      color: AppColors.filterIconColor,
-                      size: MediaQuery.of(context).size.width < 400 ? 20 : 24,
-                    ),
-                    style: AppButtonStyles.modernFilterButton,
-                    padding: EdgeInsets.all(
-                      MediaQuery.of(context).size.width < 400 ? 8 : 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Dropdown برای صفحات خیلی کوچک
-          if (!_isLoading &&
-              _categories.length > 1 &&
-              MediaQuery.of(context).size.width <= 320)
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.searchFieldBackground,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.borderColor),
-              ),
-              child: DropdownButton<String>(
-                value: _categories[_currentTabIndex],
-                isExpanded: true,
-                underline: const SizedBox(),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.primaryBlack,
-                ),
-                items: _categories.asMap().entries.map((entry) {
-                  return DropdownMenuItem<String>(
-                    value: entry.value,
-                    child: Text(
-                      entry.value,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    final index = _categories.indexOf(newValue);
-                    setState(() {
-                      _currentTabIndex = index;
-                    });
-                    _filterProducts();
-                  }
-                },
-              ),
-            ),
-
-          // تب‌های مدرن دسته‌بندی (فقط برای صفحات بزرگ‌تر از 320px)
-          if (!_isLoading &&
-              _categories.length > 1 &&
-              MediaQuery.of(context).size.width > 320)
-            Listener(
-              onPointerSignal: (event) {
-                if (event is PointerScrollEvent) {
-                  final delta = event.scrollDelta.dy;
-                  _categoryScrollController.jumpTo(
-                    (_categoryScrollController.position.pixels + delta).clamp(
-                      _categoryScrollController.position.minScrollExtent,
-                      _categoryScrollController.position.maxScrollExtent,
-                    ),
-                  );
-                }
-              },
-              child: Container(
-                height: _getTabHeight(context),
-                padding: EdgeInsets.symmetric(
-                  horizontal: MediaQuery.of(context).size.width < 350
+      body: OrientationBuilder(
+        builder: (context, orientation) {
+          final content = Column(
+            children: [
+              // نوار جستجوی مدرن
+              Container(
+                padding: EdgeInsets.all(
+                  MediaQuery.of(context).size.width < 350
                       ? 4
                       : MediaQuery.of(context).size.width < 400
                           ? 6
                           : AppDimensions.paddingMedium,
                 ),
-                child: ListView.builder(
-                  controller: _categoryScrollController,
-                  scrollDirection: Axis.horizontal,
-                  padding: EdgeInsets.zero,
-                  itemCount: _categories.length,
-                  itemBuilder: (context, index) {
-                    final category = _categories[index];
-                    final isActive = index == _currentTabIndex;
-                    return Padding(
-                      padding: EdgeInsets.only(
-                        right: MediaQuery.of(context).size.width < 400 ? 4 : 6,
-                        top: MediaQuery.of(context).size.width < 400 ? 4 : 6,
-                        bottom: MediaQuery.of(context).size.width < 400 ? 4 : 6,
-                      ),
-                      child: GestureDetector(
-                        onTap: () {
-                          _tabController.animateTo(index);
-                          setState(() {
-                            _currentTabIndex = index;
-                          });
-                          _filterProducts();
-                        },
-                        child: AnimatedContainer(
-                          duration: AppAnimations.tabTransition,
-                          padding: _getTabPadding(context),
-                          decoration: isActive
-                              ? AppDecorations.activeTab
-                              : AppDecorations.inactiveTab,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (MediaQuery.of(context).size.width >= 350) ...[
-                                Icon(
-                                  AppCategoryIcons.getIcon(category),
-                                  size: _getTabIconSize(context),
-                                  color: isActive
-                                      ? AppColors.tabActiveText
-                                      : AppColors.tabInactiveText,
-                                ),
-                                SizedBox(width: _getTabIconSpacing(context)),
-                              ],
-                              Text(
-                                category,
-                                style: isActive
-                                    ? AppTextStyles.tabActive.copyWith(
-                                        fontSize:
-                                            MediaQuery.of(context).size.width <
-                                                    400
-                                                ? 11
-                                                : 14,
-                                      )
-                                    : AppTextStyles.tabInactive.copyWith(
-                                        fontSize:
-                                            MediaQuery.of(context).size.width <
-                                                    400
-                                                ? 11
-                                                : 14,
-                                      ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: AppDecorations.modernSearchField,
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: AppInputDecorations.modernSearchField(),
+                          onChanged: (value) => _filterProducts(),
                         ),
                       ),
-                    );
-                  },
+                    ),
+                    SizedBox(
+                        width:
+                            MediaQuery.of(context).size.width < 400 ? 6 : 12),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: AppGradients.blueGradient,
+                        borderRadius: BorderRadius.circular(
+                          MediaQuery.of(context).size.width < 400 ? 8 : 12,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.cardShadowLight,
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: IconButton(
+                        onPressed: _showFilterDialog,
+                        icon: Icon(
+                          Icons.tune_rounded,
+                          color: AppColors.filterIconColor,
+                          size:
+                              MediaQuery.of(context).size.width < 400 ? 20 : 24,
+                        ),
+                        style: AppButtonStyles.modernFilterButton,
+                        padding: EdgeInsets.all(
+                          MediaQuery.of(context).size.width < 400 ? 8 : 12,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
 
-          // محتوای محصولات مدرن
-          Expanded(
-            child: _isLoading
-                ? Padding(
-                    padding: _getGridPadding(context),
-                    child: GridView.builder(
-                      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: _getMaxCrossAxisExtent(context),
-                        childAspectRatio: _getChildAspectRatio(context),
-                        crossAxisSpacing: _getGridSpacing(context),
-                        mainAxisSpacing: _getGridSpacing(context),
-                      ),
-                      itemCount: 8, // Loading shimmer count
+              // Dropdown برای صفحات خیلی کوچک
+              if (!_isLoading &&
+                  _categories.length > 1 &&
+                  MediaQuery.of(context).size.width <= 320)
+                Container(
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.searchFieldBackground,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.borderColor),
+                  ),
+                  child: DropdownButton<String>(
+                    value: _categories[_currentTabIndex],
+                    isExpanded: true,
+                    underline: const SizedBox(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.primaryBlack,
+                    ),
+                    items: _categories.asMap().entries.map((entry) {
+                      return DropdownMenuItem<String>(
+                        value: entry.value,
+                        child: Text(
+                          entry.value,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        final index = _categories.indexOf(newValue);
+                        setState(() {
+                          _currentTabIndex = index;
+                        });
+                        _filterProducts();
+                      }
+                    },
+                  ),
+                ),
+
+              // تب‌های مدرن دسته‌بندی (فقط برای صفحات بزرگ‌تر از 320px)
+              if (!_isLoading &&
+                  _categories.length > 1 &&
+                  MediaQuery.of(context).size.width > 320)
+                Listener(
+                  onPointerSignal: (event) {
+                    if (event is PointerScrollEvent) {
+                      final delta = event.scrollDelta.dy;
+                      _categoryScrollController.jumpTo(
+                        (_categoryScrollController.position.pixels + delta)
+                            .clamp(
+                          _categoryScrollController.position.minScrollExtent,
+                          _categoryScrollController.position.maxScrollExtent,
+                        ),
+                      );
+                    }
+                  },
+                  child: Container(
+                    height: _getTabHeight(context),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: MediaQuery.of(context).size.width < 350
+                          ? 4
+                          : MediaQuery.of(context).size.width < 400
+                              ? 6
+                              : AppDimensions.paddingMedium,
+                    ),
+                    child: ListView.builder(
+                      controller: _categoryScrollController,
+                      scrollDirection: Axis.horizontal,
+                      padding: EdgeInsets.zero,
+                      itemCount: _categories.length,
                       itemBuilder: (context, index) {
-                        return AppWidgetBuilders.modernLoadingShimmer(
-                            context: context);
+                        final category = _categories[index];
+                        final isActive = index == _currentTabIndex;
+                        return Padding(
+                          padding: EdgeInsets.only(
+                            right:
+                                MediaQuery.of(context).size.width < 400 ? 4 : 6,
+                            top:
+                                MediaQuery.of(context).size.width < 400 ? 4 : 6,
+                            bottom:
+                                MediaQuery.of(context).size.width < 400 ? 4 : 6,
+                          ),
+                          child: GestureDetector(
+                            onTap: () {
+                              _tabController.animateTo(index);
+                              setState(() {
+                                _currentTabIndex = index;
+                              });
+                              _filterProducts();
+                            },
+                            child: AnimatedContainer(
+                              duration: AppAnimations.tabTransition,
+                              padding: _getTabPadding(context),
+                              decoration: isActive
+                                  ? AppDecorations.activeTab
+                                  : AppDecorations.inactiveTab,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (MediaQuery.of(context).size.width >=
+                                      350) ...[
+                                    Icon(
+                                      AppCategoryIcons.getIcon(category),
+                                      size: _getTabIconSize(context),
+                                      color: isActive
+                                          ? AppColors.tabActiveText
+                                          : AppColors.tabInactiveText,
+                                    ),
+                                    SizedBox(
+                                        width: _getTabIconSpacing(context)),
+                                  ],
+                                  Text(
+                                    category,
+                                    style: isActive
+                                        ? AppTextStyles.tabActive.copyWith(
+                                            fontSize: MediaQuery.of(context)
+                                                        .size
+                                                        .width <
+                                                    400
+                                                ? 11
+                                                : 14,
+                                          )
+                                        : AppTextStyles.tabInactive.copyWith(
+                                            fontSize: MediaQuery.of(context)
+                                                        .size
+                                                        .width <
+                                                    400
+                                                ? 11
+                                                : 14,
+                                          ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
                       },
                     ),
-                  )
-                : _filteredProducts.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.search_off_rounded,
-                              size: 64,
-                              color: AppColors.greyText,
-                            ),
-                            AppSizedBox.height16,
-                            Text(
-                              'هیچ محصولی یافت نشد',
-                              style: AppTextStyles.heading3.copyWith(
-                                color: AppColors.greyText,
-                              ),
-                            ),
-                            AppSizedBox.height8,
-                            Text(
-                              'تلاش کنید با کلمات کلیدی دیگری جستجو کنید',
-                              style: AppTextStyles.bodyMedium.copyWith(
-                                color: AppColors.greyText,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      )
-                    : GridView.builder(
-                        padding: _getGridPadding(context),
+                  ),
+                ),
+
+              // محتوای محصولات مدرن
+              _isLoading
+                  ? Padding(
+                      padding: _getGridPadding(context),
+                      child: GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
                         gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
                           maxCrossAxisExtent: _getMaxCrossAxisExtent(context),
                           childAspectRatio: _getChildAspectRatio(context),
                           crossAxisSpacing: _getGridSpacing(context),
                           mainAxisSpacing: _getGridSpacing(context),
                         ),
-                        itemCount: _filteredProducts.length,
+                        itemCount: 6, // Loading shimmer count
                         itemBuilder: (context, index) {
-                          final product = _filteredProducts[index];
-                          return AppWidgetBuilders.modernProductCard(
-                            context: context,
-                            product: product,
-                            onTap: () => _showProductDetails(product),
-                            onAddToCart: () => _addToCart(product),
-                          );
+                          return AppWidgetBuilders.modernLoadingShimmer(
+                              context: context);
                         },
                       ),
-          ),
-        ],
+                    )
+                  : _filteredProducts.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.search_off_rounded,
+                                size: 64,
+                                color: AppColors.greyText,
+                              ),
+                              AppSizedBox.height16,
+                              Text(
+                                'هیچ محصولی یافت نشد',
+                                style: AppTextStyles.heading3.copyWith(
+                                  color: AppColors.greyText,
+                                ),
+                              ),
+                              AppSizedBox.height8,
+                              Text(
+                                'تلاش کنید با کلمات کلیدی دیگری جستجو کنید',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: AppColors.greyText,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        )
+                      : GridView.builder(
+                          padding: _getGridPadding(context),
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate:
+                              SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: _getMaxCrossAxisExtent(context),
+                            childAspectRatio: _getChildAspectRatio(context),
+                            crossAxisSpacing: _getGridSpacing(context),
+                            mainAxisSpacing: _getGridSpacing(context),
+                          ),
+                          itemCount: _filteredProducts.length,
+                          itemBuilder: (context, index) {
+                            final product = _filteredProducts[index];
+                            return AppWidgetBuilders.modernProductCard(
+                              context: context,
+                              product: product,
+                              onTap: () => _showProductDetails(product),
+                              onAddToCart: () => _addToCart(product),
+                            );
+                          },
+                        ),
+            ],
+          );
+
+          if (orientation == Orientation.landscape) {
+            return SingleChildScrollView(child: content);
+          }
+          return content;
+        },
       ),
     );
   }

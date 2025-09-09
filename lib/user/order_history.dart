@@ -118,11 +118,6 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     }
   }
 
-  String _formatDate(String dateString) {
-    final date = DateTime.parse(dateString);
-    return '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -234,7 +229,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        'تاریخ: ${_formatDate(order['created_at'])}',
+                                        'تاریخ: ${AppUtilities.formatJalali(order['created_at'])}',
                                         style: AppTextStyles.bodySmall,
                                       ),
                                       Text(

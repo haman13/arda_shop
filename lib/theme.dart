@@ -1,6 +1,7 @@
 // ignore_for_file: provide_deprecation_message
 
 import 'package:flutter/material.dart';
+import 'package:shamsi_date/shamsi_date.dart';
 
 // ============= Admin Credentials =============
 const String adminPhone = '09123456789';
@@ -138,7 +139,7 @@ class AppColors {
 
   // Loading and Animation Colors
   static const Color loadingBackground = Color(0xFFE3F2FD);
-  static const Color loadingIndicator = Color(0xFF2196F3);
+  static const Color loadingIndicator = AppColors.primaryWhite;
   static const Color shimmerBase = Color(0xFFE0E0E0);
   static const Color shimmerHighlight = Color(0xFFF5F5F5);
 }
@@ -1194,6 +1195,20 @@ class AppUtilities {
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (Match m) => '${m[1]},',
         )} تومان';
+  }
+
+  /// تبدیل تاریخ میلادی به شمسی (جلالی)
+  /// مثال: formatJalali("2024-01-15T10:30:00Z") => "1402/10/25"
+  static String formatJalali(String isoDateString) {
+    try {
+      final dateTime = DateTime.parse(isoDateString);
+      final jalali = Jalali.fromDateTime(dateTime);
+      final formatter = jalali.formatter;
+      return '${formatter.yyyy}/${formatter.mm}/${formatter.dd}';
+    } catch (e) {
+      // در صورت خطا، تاریخ اصلی را برگردان
+      return isoDateString;
+    }
   }
 
   /// فرمت کردن عدد با جداکننده 3 رقمی بدون واحد

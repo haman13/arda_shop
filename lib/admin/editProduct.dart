@@ -464,74 +464,147 @@ class _EditProductPageState extends State<EditProductPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.appBarBackground,
-        title: Text(
-          'ویرایش محصولات',
-          style: AppTextStyles.heading2,
-        ),
-        centerTitle: true,
-        elevation: 0.0,
-      ),
-      body: _isLoading
-          ? Center(
-              child: CircularProgressIndicator(
-                color: AppColors.primaryBlue,
-                strokeWidth: AppDimensions.loadingStrokeWidth,
-              ),
-            )
-          : ListView.builder(
-              itemCount: _products.length,
-              itemBuilder: (context, index) {
-                final product = _products[index];
-                return ListTile(
-                  leading: product['image_url'] != null
-                      ? Image.network(product['image_url'],
-                          width: 50, height: 50, fit: BoxFit.cover)
-                      : const Icon(Icons.image),
-                  title: Row(
-                    children: [
-                      Expanded(
-                        child: Text(product['name'] ?? ''),
-                      ),
-                      if ((product['stock'] ?? 0) <= 0)
-                        Container(
-                          padding: AppPadding.symmetricHorizontalLargeVertical4,
-                          decoration: BoxDecoration(
-                            color: AppColors.errorRed,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'ناموجود',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.primaryWhite,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                          'قیمت: ${AppUtilities.formatPrice(product['price'])}'),
-                      Text('موجودی: ${product['stock'] ?? 0} عدد'),
-                      if (product['category'] != null &&
-                          product['category'].toString().isNotEmpty)
-                        Text(
-                          'دسته‌بندی: ${product['category']}',
-                          style: AppTextStyles.categoryText,
-                        ),
-                    ],
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit),
-                    onPressed: () => _editProduct(product),
-                  ),
-                );
-              },
+    return OrientationBuilder(
+      builder: (context, orientation) {
+        return Scaffold(
+          appBar: AppBar(
+            backgroundColor: AppColors.appBarBackground,
+            title: Text(
+              'ویرایش محصولات',
+              style: AppTextStyles.heading2,
             ),
+            centerTitle: true,
+            elevation: 0.0,
+          ),
+          body: _isLoading
+              ? Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.primaryBlue,
+                    strokeWidth: AppDimensions.loadingStrokeWidth,
+                  ),
+                )
+              : orientation == Orientation.landscape
+                  ? SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: _products.length,
+                            itemBuilder: (context, index) {
+                              final product = _products[index];
+                              return ListTile(
+                                leading: product['image_url'] != null
+                                    ? Image.network(product['image_url'],
+                                        width: 50,
+                                        height: 50,
+                                        fit: BoxFit.cover)
+                                    : const Icon(Icons.image),
+                                title: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(product['name'] ?? ''),
+                                    ),
+                                    if ((product['stock'] ?? 0) <= 0)
+                                      Container(
+                                        padding: AppPadding
+                                            .symmetricHorizontalLargeVertical4,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.errorRed,
+                                          borderRadius:
+                                              BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          'ناموجود',
+                                          style:
+                                              AppTextStyles.bodySmall.copyWith(
+                                            color: AppColors.primaryWhite,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                        'قیمت: ${AppUtilities.formatPrice(product['price'])}'),
+                                    Text(
+                                        'موجودی: ${product['stock'] ?? 0} عدد'),
+                                    if (product['category'] != null &&
+                                        product['category']
+                                            .toString()
+                                            .isNotEmpty)
+                                      Text(
+                                        'دسته‌بندی: ${product['category']}',
+                                        style: AppTextStyles.categoryText,
+                                      ),
+                                  ],
+                                ),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.edit),
+                                  onPressed: () => _editProduct(product),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: _products.length,
+                      itemBuilder: (context, index) {
+                        final product = _products[index];
+                        return ListTile(
+                          leading: product['image_url'] != null
+                              ? Image.network(product['image_url'],
+                                  width: 50, height: 50, fit: BoxFit.cover)
+                              : const Icon(Icons.image),
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(product['name'] ?? ''),
+                              ),
+                              if ((product['stock'] ?? 0) <= 0)
+                                Container(
+                                  padding: AppPadding
+                                      .symmetricHorizontalLargeVertical4,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.errorRed,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'ناموجود',
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.primaryWhite,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                  'قیمت: ${AppUtilities.formatPrice(product['price'])}'),
+                              Text('موجودی: ${product['stock'] ?? 0} عدد'),
+                              if (product['category'] != null &&
+                                  product['category'].toString().isNotEmpty)
+                                Text(
+                                  'دسته‌بندی: ${product['category']}',
+                                  style: AppTextStyles.categoryText,
+                                ),
+                            ],
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.edit),
+                            onPressed: () => _editProduct(product),
+                          ),
+                        );
+                      },
+                    ),
+        );
+      },
     );
   }
 }

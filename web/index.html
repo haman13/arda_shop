@@ -81,21 +81,20 @@
   <div id="flutter_app" style="display: none;"></div>
 
   <!-- Flutter Web Scripts -->
+  <script src="flutter_bootstrap.js" defer></script>
   <script src="flutter.js" defer></script>
   <script>
     window.addEventListener('load', function() {
-      // Initialize Flutter with simple configuration
-      _flutter.loader.loadEntrypoint({
-        onEntrypointLoaded: function(engineInitializer) {
-          engineInitializer.initializeEngine().then(function(appRunner) {
-            // Hide loading screen
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('flutter_app').style.display = 'block';
-            
-            // Run the app
-            appRunner.runApp();
-          });
-        }
+      // Initialize Flutter with new API
+      _flutter.loader.load({}).then(function(engineInitializer) {
+        return engineInitializer.initializeEngine();
+      }).then(function(appRunner) {
+        // Hide loading screen
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('flutter_app').style.display = 'block';
+
+        // Run the app
+        appRunner.runApp();
       });
     });
   </script>

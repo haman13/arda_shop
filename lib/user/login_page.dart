@@ -141,95 +141,132 @@ class _LoginPageState extends State<LoginPage> {
         centerTitle: true,
         elevation: 0.0,
       ),
-      body: Padding(
-        padding: AppPadding.allMedium,
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextFormField(
-                controller: _phoneController,
-                decoration: AppInputDecorations.formField(
-                  'شماره تماس',
-                  hint: '09xxxxxxxxx',
-                ),
-                keyboardType: TextInputType.phone,
-                textInputAction: TextInputAction.next,
-                maxLength: 11,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                ],
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'لطفاً شماره تماس را وارد کنید';
-                  }
-                  if (value.length != 11) {
-                    return 'شماره تماس باید ۱۱ رقم باشد';
-                  }
-                  if (!value.startsWith('09')) {
-                    return 'شماره تماس باید با ۰۹ شروع شود';
-                  }
-                  return null;
-                },
-              ),
-              AppSizedBox.height16,
-              TextFormField(
-                controller: _passwordController,
-                decoration: AppInputDecorations.formField('رمز عبور'),
-                obscureText: true,
-                textInputAction: TextInputAction.done,
-                onFieldSubmitted: (_) {
-                  if (!_isLoading) {
-                    _login();
-                  }
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'لطفاً رمز عبور را وارد کنید';
-                  }
-                  return null;
-                },
-              ),
-              AppSizedBox.height24,
-              SizedBox(
-                width: double.infinity,
-                height: AppDimensions.buttonHeight,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _login,
-                  style: AppButtonStyles.primaryButton,
-                  child: _isLoading
-                      ? SizedBox(
-                          width: AppDimensions.loadingIndicatorWidth,
-                          height: AppDimensions.loadingIndicatorHeight,
-                          child: CircularProgressIndicator(
-                            color: AppColors.loadingIndicator,
-                            strokeWidth: AppDimensions.loadingStrokeWidth,
+      body: SafeArea(
+        child: OrientationBuilder(
+          builder: (context, orientation) {
+            final formContent = Padding(
+              padding: AppPadding.allMedium,
+              child: LayoutBuilder(builder: (context, constraints) {
+                final double maxFieldWidth = constraints.maxWidth > 800
+                    ? constraints.maxWidth * 0.35
+                    : constraints.maxWidth;
+                return Align(
+                  alignment: Alignment.topCenter,
+                  child: SizedBox(
+                    width: maxFieldWidth,
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          TextFormField(
+                            controller: _phoneController,
+                            decoration: AppInputDecorations.formField(
+                              'شماره تماس',
+                              hint: '09xxxxxxxxx',
+                            ),
+                            keyboardType: TextInputType.phone,
+                            textInputAction: TextInputAction.next,
+                            maxLength: 11,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'لطفاً شماره تماس را وارد کنید';
+                              }
+                              if (value.length != 11) {
+                                return 'شماره تماس باید ۱۱ رقم باشد';
+                              }
+                              if (!value.startsWith('09')) {
+                                return 'شماره تماس باید با ۰۹ شروع شود';
+                              }
+                              return null;
+                            },
                           ),
-                        )
-                      : Text(
-                          'ورود',
-                          style: AppTextStyles.buttonText,
-                        ),
-                ),
-              ),
-              AppSizedBox.height16,
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const RegisterPage()),
-                  );
-                },
-                style: AppButtonStyles.transparentButton,
-                child: Text(
-                  'ثبت‌نام',
-                  style: AppTextStyles.linkText,
-                ),
-              ),
-            ],
-          ),
+                          AppSizedBox.height16,
+                          TextFormField(
+                            controller: _passwordController,
+                            decoration:
+                                AppInputDecorations.formField('رمز عبور'),
+                            obscureText: true,
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) {
+                              if (!_isLoading) {
+                                _login();
+                              }
+                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'لطفاً رمز عبور را وارد کنید';
+                              }
+                              return null;
+                            },
+                          ),
+                          AppSizedBox.height24,
+                          SizedBox(
+                            width: double.infinity,
+                            height: AppDimensions.buttonHeight,
+                            child: ElevatedButton(
+                              onPressed: _isLoading ? null : _login,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryBlue,
+                                foregroundColor: AppColors.primaryWhite,
+                                textStyle: AppTextStyles.buttonText,
+                              ),
+                              child: _isLoading
+                                  ? SizedBox(
+                                      width:
+                                          AppDimensions.loadingIndicatorWidth,
+                                      height:
+                                          AppDimensions.loadingIndicatorHeight,
+                                      child: CircularProgressIndicator(
+                                        color: AppColors.loadingIndicator,
+                                        strokeWidth:
+                                            AppDimensions.loadingStrokeWidth,
+                                      ),
+                                    )
+                                  : Text(
+                                      'ورود',
+                                      style: AppTextStyles.buttonText,
+                                    ),
+                            ),
+                          ),
+                          AppSizedBox.height16,
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => const RegisterPage()),
+                              );
+                            },
+                            style: AppButtonStyles.transparentButton,
+                            child: Text(
+                              'ثبت‌نام',
+                              style: AppTextStyles.linkText,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            );
+            if (orientation == Orientation.landscape) {
+              return SingleChildScrollView(
+                padding:
+                    const EdgeInsets.only(bottom: AppDimensions.spacingLarge),
+                child: formContent,
+              );
+            }
+            return SingleChildScrollView(
+              padding:
+                  const EdgeInsets.only(bottom: AppDimensions.spacingLarge),
+              child: formContent,
+            );
+          },
         ),
       ),
     );
