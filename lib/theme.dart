@@ -677,6 +677,9 @@ class AppInputDecorations {
         borderRadius: AppBorderRadius.medium,
         borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
       ),
+      filled: true,
+      fillColor: AppColors.searchFieldBackground,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );
   }
 

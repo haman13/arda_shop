@@ -90,6 +90,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   void initState() {
     super.initState();
     _checkUserStatus();
+  
   }
 
   Future<void> _checkUserStatus() async {
