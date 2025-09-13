@@ -211,6 +211,27 @@ class _UserManagementPageState extends State<UserManagementPage> {
     }
   }
 
+  // تعیین اندازه فونت بر اساس سایز صفحه و مقیاس فونت
+  double _getResponsiveFontSize(BuildContext context, double baseFontSize) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final textScale = MediaQuery.of(context).textScaleFactor;
+
+    // تنظیم فونت بر اساس عرض صفحه
+    double scaleFactor = 1.0;
+    if (screenWidth > 1200) {
+      scaleFactor = 1.2; // دسکتاپ
+    } else if (screenWidth > 800) {
+      scaleFactor = 1.1; // تبلت
+    } else if (screenWidth > 600) {
+      scaleFactor = 1.0; // تبلت کوچک
+    } else {
+      scaleFactor = 0.9; // موبایل
+    }
+
+    // اعمال مقیاس فونت سیستم
+    return (baseFontSize * scaleFactor * textScale).clamp(12.0, 24.0);
+  }
+
   void _showUserDetails(Map<String, dynamic> user) {
     showDialog(
       context: context,
@@ -526,7 +547,9 @@ class _UserManagementPageState extends State<UserManagementPage> {
             backgroundColor: AppColors.appBarBackground,
             title: Text(
               'مدیریت کاربران',
-              style: AppTextStyles.heading2,
+              style: AppTextStyles.heading2.copyWith(
+                fontSize: _getResponsiveFontSize(context, 20.0),
+              ),
             ),
             centerTitle: true,
             elevation: 0.0,
@@ -852,6 +875,27 @@ class _UserDetailsModalState extends State<_UserDetailsModal> {
   List<Map<String, dynamic>> userOrders = [];
   bool isLoadingOrders = true;
   bool isUpdatingStatus = false;
+
+  // تعیین اندازه فونت بر اساس سایز صفحه و مقیاس فونت
+  double _getResponsiveFontSize(BuildContext context, double baseFontSize) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final textScale = MediaQuery.of(context).textScaleFactor;
+
+    // تنظیم فونت بر اساس عرض صفحه
+    double scaleFactor = 1.0;
+    if (screenWidth > 1200) {
+      scaleFactor = 1.2; // دسکتاپ
+    } else if (screenWidth > 800) {
+      scaleFactor = 1.1; // تبلت
+    } else if (screenWidth > 600) {
+      scaleFactor = 1.0; // تبلت کوچک
+    } else {
+      scaleFactor = 0.9; // موبایل
+    }
+
+    // اعمال مقیاس فونت سیستم
+    return (baseFontSize * scaleFactor * textScale).clamp(12.0, 24.0);
+  }
 
   @override
   void initState() {
@@ -1192,7 +1236,9 @@ class _UserDetailsModalState extends State<_UserDetailsModal> {
                     // Recent orders section
                     Text(
                       'آخرین سفارشات',
-                      style: AppTextStyles.heading3,
+                      style: AppTextStyles.heading3.copyWith(
+                        fontSize: _getResponsiveFontSize(context, 18.0),
+                      ),
                     ),
                     AppSizedBox.height12,
 

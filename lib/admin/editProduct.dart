@@ -58,6 +58,27 @@ class _EditProductPageState extends State<EditProductPage> {
     }
   }
 
+  // تعیین اندازه فونت بر اساس سایز صفحه و مقیاس فونت
+  double _getResponsiveFontSize(BuildContext context, double baseFontSize) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final textScale = MediaQuery.of(context).textScaleFactor;
+
+    // تنظیم فونت بر اساس عرض صفحه
+    double scaleFactor = 1.0;
+    if (screenWidth > 1200) {
+      scaleFactor = 1.2; // دسکتاپ
+    } else if (screenWidth > 800) {
+      scaleFactor = 1.1; // تبلت
+    } else if (screenWidth > 600) {
+      scaleFactor = 1.0; // تبلت کوچک
+    } else {
+      scaleFactor = 0.9; // موبایل
+    }
+
+    // اعمال مقیاس فونت سیستم
+    return (baseFontSize * scaleFactor * textScale).clamp(12.0, 24.0);
+  }
+
   void _editProduct(Map<String, dynamic> product) {
     final _editFormKey = GlobalKey<FormState>();
     final nameController = TextEditingController(text: product['name'] ?? '');
